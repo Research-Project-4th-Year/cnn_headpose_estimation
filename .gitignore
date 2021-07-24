@@ -1,8 +1,8 @@
 *.pyc
 *.npy
 data/*
-output/*
-datasets/*
+code/output/*
+code/datasets/*
 .vscode/*
 *.jpg
 *.png
