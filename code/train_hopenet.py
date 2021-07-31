@@ -252,6 +252,12 @@ if __name__ == '__main__':
 
             # Forward pass
             yaw, pitch, roll = model(images)
+            print("yaw: ",yaw)
+            print("pitch: ", pitch)
+            print("roll: ", roll)
+
+            exit()
+
 
             # Cross entropy loss
             loss_yaw = criterion(yaw, label_yaw)
