@@ -16,6 +16,7 @@ import torch.nn.functional as F
 import datasets, hopenet, hopelessnet
 import torch.utils.model_zoo as model_zoo
 
+
 def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(
@@ -29,7 +30,7 @@ def parse_args():
         default=50, type=int)
     parser.add_argument(
         '--batch_size', dest='batch_size', help='Batch size.',
-        default=64, type=int)
+        default=16, type=int)
     parser.add_argument(
         '--lr', dest='lr', help='Base learning rate.',
         default=0.000001, type=float)
@@ -123,7 +124,7 @@ def load_filtered_state_dict(model, snapshot):
 
 if __name__ == '__main__':
     args = parse_args()
-
+    torch.cuda.empty_cache()
     cudnn.enabled = True
     num_epochs = args.num_epochs
     batch_size = args.batch_size
@@ -252,11 +253,6 @@ if __name__ == '__main__':
 
             # Forward pass
             yaw, pitch, roll = model(images)
-            print("yaw: ",yaw)
-            print("pitch: ", pitch)
-            print("roll: ", roll)
-
-            exit()
 
 
             # Cross entropy loss
