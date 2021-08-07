@@ -3,3 +3,9 @@ python test_hopenet.py --snapshot ../models//hopenet_snapshot_a1.pkl --data_dir 
 python create_filename_list.py --root_dir ./datasets/AFLW2000
 
 python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/hopenet_AFLW2000.pkl  --dataset AFLW2000
+
+python test_hopenet.py --data_dir datasets/AFLW2000 --filename_list datasets/AFLW2000/files.txt --snapshot output/snapshots/Squeezenet_1_0_epoch_41.pkl --dataset AFLW2000 --arch Squeezenet_1_0
+
+python test_on_video.py --snapshot output/snapshots/ResNet50_epoch_41.pkl --video video/Game_of_Thrones.avi
+
+python test_on_video_dlib.py --snapshot output/snapshots/ResNet50_epoch_41.pkl --video video/Game_of_Thrones.avi --face_model ../models/mmod_human_face_detector.dat --n_frames 1392 --arch RestNet50

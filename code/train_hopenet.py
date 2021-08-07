@@ -239,7 +239,7 @@ if __name__ == '__main__':
     for epoch in range(num_epochs):
         for i, (images, labels, cont_labels, name) in enumerate(train_loader):
             images = Variable(images).cuda(gpu)
-
+    
             # Binned labels
             label_yaw = Variable(labels[:,0]).cuda(gpu)
             label_pitch = Variable(labels[:,1]).cuda(gpu)
@@ -252,12 +252,6 @@ if __name__ == '__main__':
 
             # Forward pass
             yaw, pitch, roll = model(images)
-            print("yaw: ",yaw)
-            print("pitch: ", pitch)
-            print("roll: ", roll)
-
-            exit()
-
 
             # Cross entropy loss
             loss_yaw = criterion(yaw, label_yaw)
@@ -291,8 +285,8 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             torch.autograd.backward(loss_seq, grad_seq)
             optimizer.step()
-
-            if (i+1) % 100 == 0:
+            #print(i)
+            if (i+1) % 10 == 0:
                 print ('Epoch [%d/%d], Iter [%d/%d] Losses: '
                     'Yaw %.4f, Pitch %.4f, Roll %.4f'%(
                         epoch+1, 
@@ -306,9 +300,9 @@ if __name__ == '__main__':
                 )
 
         # Save models at numbered epochs.
-        if epoch % 1 == 0 and epoch < num_epochs:
+        if epoch % 10 == 0 and epoch < num_epochs:
             print('Taking snapshot...',
                 torch.save(model.state_dict(),
                 'output/snapshots/' + args.output_string + 
-                '_epoch_'+ str(epoch+1) + '.pkl')
+                str(args.arch)+'_epoch_'+ str(epoch+1) + '.pkl')
             )
