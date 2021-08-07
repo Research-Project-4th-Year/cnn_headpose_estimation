@@ -7,3 +7,5 @@ pip install torchvision==0.4.1
 pip install pandas==1.0.5
 pip install scipy==1.4.1
 pip install opencv-python==4.2.0.32
+
+conda install -c conda-forge dlib

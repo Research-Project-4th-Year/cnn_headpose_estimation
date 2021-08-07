@@ -18,6 +18,9 @@ import datasets, hopenet, hopelessnet, utils
 
 from skimage import io
 import dlib
+import time
+start_time = time.time()
+total_time = 0
 
 def parse_args():
     """Parse input arguments."""
@@ -177,7 +180,10 @@ if __name__ == '__main__':
                 img = img.view(1, img_shape[0], img_shape[1], img_shape[2])
                 img = Variable(img).cuda(gpu)
 
+                start_time1 = time.time()
                 yaw, pitch, roll = model(img)
+                start_time2 = time.time()
+                total_time+=start_time2-start_time1
 
                 yaw_predicted = F.softmax(yaw)
                 pitch_predicted = F.softmax(pitch)
@@ -199,3 +205,5 @@ if __name__ == '__main__':
 
     out.release()
     video.release()
+print(total_time)
+print("--- %s seconds ---" % (time.time() - start_time))

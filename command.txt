@@ -3,3 +3,6 @@ python test_hopenet.py --snapshot ../models//hopenet_snapshot_a1.pkl --data_dir 
 python create_filename_list.py --root_dir ./datasets/AFLW2000
 
 python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/hopenet_AFLW2000.pkl  --dataset AFLW2000
+
+
+python test_on_video_dlib.py --snapshot ../models/resnet50_train_AFLW2000.pkl --video video/Game_of_Thrones.avi --face_model ../models/mmod_human_face_detector.dat --n_frames 200 --arch RestNet50

@@ -142,14 +142,6 @@ if __name__ == '__main__':
         model = hopenet.Hopenet(
             torchvision.models.resnet.BasicBlock, [3,4,6,3], 66)
         pre_url = 'https://download.pytorch.org/models/resnet34-333f7ec4.pth'
-    elif args.arch == 'ResNet101':
-        model = hopenet.Hopenet(
-            torchvision.models.resnet.Bottleneck, [3, 4, 23, 3], 66)
-        pre_url = 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth'
-    elif args.arch == 'ResNet152':
-        model = hopenet.Hopenet(
-            torchvision.models.resnet.Bottleneck, [3, 8, 36, 3], 66)
-        pre_url = 'https://download.pytorch.org/models/resnet152-b121ed2d.pth'
     elif args.arch == 'Squeezenet_1_0':
         model = hopelessnet.Hopeless_Squeezenet(args.arch, 66)
         pre_url = \
@@ -175,6 +167,13 @@ if __name__ == '__main__':
     else:
         saved_state_dict = torch.load(args.snapshot)
         model.load_state_dict(saved_state_dict)
+
+    #Load teacher network
+    #resnet50
+    teacher_model = hopenet.Hopenet(
+            torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
+    saved_state_dict = torch.load('../models/resnet50_train_AFLW2000.pkl')
+    teacher_model.load_state_dict(saved_state_dict)
 
     print('Loading data.')
 
@@ -245,11 +244,27 @@ if __name__ == '__main__':
             label_yaw = Variable(labels[:,0]).cuda(gpu)
             label_pitch = Variable(labels[:,1]).cuda(gpu)
             label_roll = Variable(labels[:,2]).cuda(gpu)
+            print("------Binned Labels Shapes-------")
+            print("yaw:",label_yaw.shape)
+            print("pitch:",label_pitch.shape)
+            print("roll:",label_roll.shape)
+            print("------Binned Labels-------")
+            print("Label_yaw:",label_yaw)
+            print("Label_pitch:",label_pitch)
+            print("Label_roll:",label_roll)
 
             # Continuous labels
             label_yaw_cont = Variable(cont_labels[:,0]).cuda(gpu)
             label_pitch_cont = Variable(cont_labels[:,1]).cuda(gpu)
             label_roll_cont = Variable(cont_labels[:,2]).cuda(gpu)
+            print("------Continuous Labels Shapes-------")
+            print("yaw:",label_yaw_cont.shape)
+            print("pitch:",label_pitch_cont.shape)
+            print("roll:",label_roll_cont.shape)
+            print("------Continuous Labels-------")
+            print("Label_yaw:",label_yaw_cont)
+            print("Label_pitch:",label_pitch_cont)
+            print("Label_roll:",label_roll_cont)
 
             # Forward pass
             yaw, pitch, roll = model(images)
@@ -264,6 +279,9 @@ if __name__ == '__main__':
             yaw_predicted = softmax(yaw)
             pitch_predicted = softmax(pitch)
             roll_predicted = softmax(roll)
+            print("yaw_predicted:",yaw_predicted)
+            print("pitch_predicted:",pitch_predicted)
+            print("roll_predicted:",roll_predicted)
 
             yaw_predicted = \
                 torch.sum(yaw_predicted * idx_tensor, 1) * 3 - 99
@@ -287,7 +305,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             torch.autograd.backward(loss_seq, grad_seq)
             optimizer.step()
-
+            exit()
             if (i+1) % 100 == 0:
                 print ('Epoch [%d/%d], Iter [%d/%d] Losses: '
                     'Yaw %.4f, Pitch %.4f, Roll %.4f'%(
