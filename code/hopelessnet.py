@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torchvision import models as tvmodels
 
 tvmodels.squeezenet.squeezenet1_1
-tvmodels.mobilenet.mobilenet_v2
+#tvmodels.mobilenet.mobilenet_v2
 
 class Fire(nn.Module):
 

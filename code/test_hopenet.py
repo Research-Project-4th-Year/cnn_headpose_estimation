@@ -50,6 +50,9 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+def count_parameters_in_MB(model):
+    return sum(np.prod(v.size()) for name, v in model.named_parameters())/1e6
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -87,6 +90,8 @@ if __name__ == '__main__':
     # Load snapshot
     saved_state_dict = torch.load(snapshot_path)
     model.load_state_dict(saved_state_dict)
+
+    print(f"Model Size: {count_parameters_in_MB(model)}MB")
 
     print('Loading data.')
 

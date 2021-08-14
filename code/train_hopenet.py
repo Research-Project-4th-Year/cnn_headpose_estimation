@@ -13,7 +13,7 @@ import torchvision
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
-import datasets, hopenet, hopelessnet
+import datasets, hopenet, hopelessnet, st_loss
 import torch.utils.model_zoo as model_zoo
 
 
@@ -122,6 +122,9 @@ def load_filtered_state_dict(model, snapshot):
     model_dict.update(snapshot)
     model.load_state_dict(model_dict)
 
+def count_parameters_in_MB(model):
+    return sum(np.prod(v.size()) for name, v in model.named_parameters())/1e6
+
 if __name__ == '__main__':
     args = parse_args()
     torch.cuda.empty_cache()
@@ -133,7 +136,9 @@ if __name__ == '__main__':
     if not os.path.exists('output/snapshots'):
         os.makedirs('output/snapshots')
 
-    # Network architecture
+    #----------------------------------Network Initialization------------------------------------------------
+    
+    # student architecture
     if args.arch == 'ResNet18':
         model = hopenet.Hopenet(
             torchvision.models.resnet.BasicBlock, [2, 2, 2, 2], 66)
@@ -167,13 +172,20 @@ if __name__ == '__main__':
     else:
         saved_state_dict = torch.load(args.snapshot)
         model.load_state_dict(saved_state_dict)
+    print(f"Student Netowrk Size: {count_parameters_in_MB(model)}MB")
+    print("Student: ",model)
 
-    #Load teacher network
-    #resnet50
+    #Load teacher network - resnet50
     teacher_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
     saved_state_dict = torch.load('../models/resnet50_train_AFLW2000.pkl')
     teacher_model.load_state_dict(saved_state_dict)
+    teacher_model.eval()
+    for param in teacher_model.parameters():
+        param.requires_grad = False
+    print(f"Teacher Netowrk Size: {count_parameters_in_MB(teacher_model)}MB")
+    print("Teacher:",teacher_model)
+    
 
     print('Loading data.')
 
@@ -220,10 +232,14 @@ if __name__ == '__main__':
         num_workers=2)
 
     model.cuda(gpu)
+    teacher_model.cuda(gpu)
     criterion = nn.CrossEntropyLoss().cuda(gpu)
     reg_criterion = nn.MSELoss().cuda(gpu)
     # Regression loss coefficient
     alpha = args.alpha
+
+    #define kd loss function
+    kd_criterion = st_loss.SoftTarget(4.0)
 
     softmax = nn.Softmax(dim=1).cuda(gpu)
     idx_tensor = [idx for idx in range(66)]
@@ -236,6 +252,7 @@ if __name__ == '__main__':
         ], lr = args.lr)
 
     print('Ready to train network.')
+    model.train()
     for epoch in range(num_epochs):
         for i, (images, labels, cont_labels, name) in enumerate(train_loader):
             images = Variable(images).cuda(gpu)
@@ -244,44 +261,53 @@ if __name__ == '__main__':
             label_yaw = Variable(labels[:,0]).cuda(gpu)
             label_pitch = Variable(labels[:,1]).cuda(gpu)
             label_roll = Variable(labels[:,2]).cuda(gpu)
-            print("------Binned Labels Shapes-------")
-            print("yaw:",label_yaw.shape)
-            print("pitch:",label_pitch.shape)
-            print("roll:",label_roll.shape)
-            print("------Binned Labels-------")
-            print("Label_yaw:",label_yaw)
-            print("Label_pitch:",label_pitch)
-            print("Label_roll:",label_roll)
+            # print("------Binned Labels Shapes-------")
+            # print("yaw:",label_yaw.shape)
+            # print("pitch:",label_pitch.shape)
+            # print("roll:",label_roll.shape)
+            # print("------Binned Labels-------")
+            # print("Label_yaw:",label_yaw)
+            # print("Label_pitch:",label_pitch)
+            # print("Label_roll:",label_roll)
 
             # Continuous labels
             label_yaw_cont = Variable(cont_labels[:,0]).cuda(gpu)
             label_pitch_cont = Variable(cont_labels[:,1]).cuda(gpu)
             label_roll_cont = Variable(cont_labels[:,2]).cuda(gpu)
-            print("------Continuous Labels Shapes-------")
-            print("yaw:",label_yaw_cont.shape)
-            print("pitch:",label_pitch_cont.shape)
-            print("roll:",label_roll_cont.shape)
-            print("------Continuous Labels-------")
-            print("Label_yaw:",label_yaw_cont)
-            print("Label_pitch:",label_pitch_cont)
-            print("Label_roll:",label_roll_cont)
+            # print("------Continuous Labels Shapes-------")
+            # print("yaw:",label_yaw_cont.shape)
+            # print("pitch:",label_pitch_cont.shape)
+            # print("roll:",label_roll_cont.shape)
+            # print("------Continuous Labels-------")
+            # print("Label_yaw:",label_yaw_cont)
+            # print("Label_pitch:",label_pitch_cont)
+            # print("Label_roll:",label_roll_cont)
 
             # Forward pass
             yaw, pitch, roll = model(images)
-
-
+            yaw_t, pitch_t, roll_t = teacher_model(images)
+            
             # Cross entropy loss
-            loss_yaw = criterion(yaw, label_yaw)
-            loss_pitch = criterion(pitch, label_pitch)
-            loss_roll = criterion(roll, label_roll)
+            # loss_yaw = criterion(yaw, label_yaw)
+            # loss_pitch = criterion(pitch, label_pitch)
+            # loss_roll = criterion(roll, label_roll)
+
+            # student loss with soft targets
+            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * 1.0
+            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * 1.0
+            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * 1.0
+
+            loss_yaw=kd_loss_yaw
+            loss_pitch=kd_loss_pitch
+            loss_roll=kd_loss_roll
 
             # MSE loss
             yaw_predicted = softmax(yaw)
             pitch_predicted = softmax(pitch)
             roll_predicted = softmax(roll)
-            print("yaw_predicted:",yaw_predicted)
-            print("pitch_predicted:",pitch_predicted)
-            print("roll_predicted:",roll_predicted)
+            # print("yaw_predicted:",yaw_predicted)
+            # print("pitch_predicted:",pitch_predicted)
+            # print("roll_predicted:",roll_predicted)
 
             yaw_predicted = \
                 torch.sum(yaw_predicted * idx_tensor, 1) * 3 - 99
@@ -305,7 +331,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             torch.autograd.backward(loss_seq, grad_seq)
             optimizer.step()
-            exit()
+            
             if (i+1) % 100 == 0:
                 print ('Epoch [%d/%d], Iter [%d/%d] Losses: '
                     'Yaw %.4f, Pitch %.4f, Roll %.4f'%(
@@ -326,3 +352,4 @@ if __name__ == '__main__':
                 'output/snapshots/' + args.output_string + 
                 '_epoch_'+ str(epoch+1) + '.pkl')
             )
+
