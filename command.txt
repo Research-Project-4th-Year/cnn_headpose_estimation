@@ -2,7 +2,23 @@ python test_hopenet.py --snapshot ../models//hopenet_snapshot_a1.pkl --data_dir 
 
 python create_filename_list.py --root_dir ./datasets/AFLW2000
 
-python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/hopenet_AFLW2000.pkl  --dataset AFLW2000
+python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot output/snapshots/_epoch_50.pkl  --dataset AFLW2000 --arch ResNet34
 
 
-python test_on_video_dlib.py --snapshot ../models/resnet50_train_AFLW2000.pkl --video video/Game_of_Thrones.avi --face_model ../models/mmod_human_face_detector.dat --n_frames 200 --arch RestNet50
+python test_on_video_dlib.py --snapshot output/snapshots/_epoch_50.pkl --video video/Game_of_Thrones.avi --face_model ../models/mmod_human_face_detector.dat --n_frames 200 --arch RestNet50
+
+Train_Base_Network
+python train_hopenet.py --data_dir datasets/300W-3D --filename_list datasets/300W-3D/300W-LP.txt
+
+###########Train KD Models#####################
+python train_hopenet.py --dataset AFLW2000 --data_dir datasets/AFLW2000 --filename_list datasets/AFLW2000/files.txt --arch ResNet34
+python train_hopenet.py --dataset AFLW2000 --data_dir datasets/AFLW2000 --filename_list datasets/AFLW2000/files.txt --arch ResNet18
+python train_hopenet.py --dataset AFLW2000 --data_dir datasets/AFLW2000 --filename_list datasets/AFLW2000/files.txt --arch MobileNetV2
+python train_hopenet.py --dataset AFLW2000 --data_dir datasets/AFLW2000 --filename_list datasets/AFLW2000/files.txt --arch Squeezenet_1_0
+
+###########Test KD Models(Student)################
+
+python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/kd/logit_2015/resnet34_student.pkl  --dataset AFLW2000 --arch ResNet34
+python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/kd/logit_2015/resnet18_student.pkl  --dataset AFLW2000 --arch ResNet18
+python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/kd/logit_2015/mobilenetv2_student.pkl  --dataset AFLW2000 --arch MobileNetV2
+python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/kd/logit_2015/squeezenet_1_0_student.pkl  --dataset AFLW2000 --arch Squeezenet_1_0

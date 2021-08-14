@@ -3,6 +3,7 @@
 data/*
 code/output/*
 code/datasets/*
+models/*
 .vscode/*
 *.jpg
 *.png
