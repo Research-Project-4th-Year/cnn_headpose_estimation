@@ -300,7 +300,7 @@ if __name__ == '__main__':
                 )
 
         # Save models at numbered epochs.
-        if epoch % 10 == 0 and epoch < num_epochs:
+        if epoch % 1 == 0 and epoch < num_epochs:
             print('Taking snapshot...',
                 torch.save(model.state_dict(),
                 'output/snapshots/' + args.output_string + 
