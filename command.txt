@@ -4,15 +4,17 @@ python create_filename_list.py --root_dir ./datasets/AFLW2000
 
 python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/hopenet_AFLW2000.pkl  --dataset AFLW2000
 
-python test_hopenet.py --data_dir datasets/AFLW2000 --filename_list datasets/AFLW2000/files.txt --snapshot output/snapshots/Squeezenet_1_0_epoch_41.pkl --dataset AFLW2000 --arch Squeezenet_1_0
+python test_hopenet.py --data_dir datasets/AFLW2000 --filename_list datasets/AFLW2000/files.txt --snapshot output/snapshots/squeezenet1_0_basic.pkl --dataset AFLW2000 --arch Squeezenet_1_0
 
-python test_on_video.py --snapshot output/snapshots/ResNet50_epoch_41.pkl --video video/Game_of_Thrones.avi
+python test_on_video.py --snapshot output/snapshots/resnet50_basic_1.pkl --video video/Game_of_Thrones.avi
 
 python test_on_video_dlib.py --snapshot output/snapshots/ResNet50_epoch_45.pkl --video video/Game_of_Thrones.avi --face_model ../models/mmod_human_face_detector.dat --n_frames 1392 --arch RestNet50
 
 
 ##Train Command
-python train_hopenet.py --data_dir datasets/300W-3D --filename_list datasets/300W-3D/300W-LP.txt
+python train_hopenet.py --data_dir datasets/300W_LP --filename_list datasets/300W_LP/300W_LP_filename_filtered.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 25
+
+python train_hopenet.py --data_dir datasets/300W_LP --filename_list datasets/300W_LP/300W_LP_filename_filtered.txt --lr 0.000001 --alpha 2 --batch_size 64 --num_epochs 25 --arch Squeezenet_1_0
 
 python train_hopenet.py --data_dir datasets/300W-3D --filename_list datasets/300W-3D/300W-LP.txt --lr 0.00001 --alpha 2 --batch_size 64
 
