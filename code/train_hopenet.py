@@ -54,6 +54,9 @@ def parse_args():
         '--snapshot', dest='snapshot', help='Path of model snapshot.',
         default='', type=str)
     parser.add_argument(
+        '--temperature',
+        default=1, type=float)
+    parser.add_argument(
         '--arch', dest='arch', 
         help='Network architecture, can be: ResNet18, ResNet34, [ResNet50], '
             'ResNet101, ResNet152, Squeezenet_1_0, Squeezenet_1_1, MobileNetV2',
@@ -178,7 +181,7 @@ if __name__ == '__main__':
     #Load teacher network - resnet50
     teacher_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
-    saved_state_dict = torch.load('../models/resnet50_train_AFLW2000.pkl')
+    saved_state_dict = torch.load('output/snapshots/resnet50_basic_4.pkl')
     teacher_model.load_state_dict(saved_state_dict)
     teacher_model.eval()
     for param in teacher_model.parameters():
@@ -239,7 +242,8 @@ if __name__ == '__main__':
     alpha = args.alpha
 
     #define kd loss function
-    kd_criterion = st_loss.SoftTarget(4.0)
+    print(args.temperature)
+    kd_criterion = st_loss.SoftTarget(args.temperature)
 
     softmax = nn.Softmax(dim=1).cuda(gpu)
     idx_tensor = [idx for idx in range(66)]
@@ -288,18 +292,18 @@ if __name__ == '__main__':
             yaw_t, pitch_t, roll_t = teacher_model(images)
             
             # Cross entropy loss
-            # loss_yaw = criterion(yaw, label_yaw)
-            # loss_pitch = criterion(pitch, label_pitch)
-            # loss_roll = criterion(roll, label_roll)
+            loss_yaw = criterion(yaw, label_yaw) * 0.5
+            loss_pitch = criterion(pitch, label_pitch) * 0.5
+            loss_roll = criterion(roll, label_roll) * 0.5
 
             # student loss with soft targets
-            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * 1.0
-            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * 1.0
-            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * 1.0
+            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * 0.5
+            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * 0.5
+            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * 0.5
 
-            loss_yaw=kd_loss_yaw
-            loss_pitch=kd_loss_pitch
-            loss_roll=kd_loss_roll
+            loss_yaw+=kd_loss_yaw
+            loss_pitch+=kd_loss_pitch
+            loss_roll+=kd_loss_roll
 
             # MSE loss
             yaw_predicted = softmax(yaw)
