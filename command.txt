@@ -17,11 +17,11 @@ python train_hopenet.py --dataset AFLW2000 --data_dir datasets/AFLW2000 --filena
 python train_hopenet.py --dataset AFLW2000 --data_dir datasets/AFLW2000 --filename_list datasets/AFLW2000/files.txt --arch Squeezenet_1_0
 
 
-python train_hopenet.py --data_dir datasets/300W_LP --filename_list datasets/300W_LP/300W_LP_filename_filtered.txt --lr 0.000001 --alpha 2 --batch_size 64 --num_epochs 25 --arch ResNet34 --temperature 4.0
+python train_hopenet.py --data_dir datasets/300W_LP --filename_list datasets/300W_LP/300W_LP_filename_filtered.txt --lr 0.000001 --alpha 2 --batch_size 64 --num_epochs 10 --arch ResNet34 --temperature 20.0
 
 ###########Test KD Models(Student)################
 
-python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot output/snapshots/resnet34_logit_t_6.pkl  --dataset AFLW2000 --arch ResNet34
+python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot output/snapshots/resnet50_basic_4.pkl  --dataset AFLW2000 --arch ResNet50
 
 python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/kd/logit_2015/resnet34_student.pkl  --dataset AFLW2000 --arch ResNet34
 python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/kd/logit_2015/resnet18_student.pkl  --dataset AFLW2000 --arch ResNet18
