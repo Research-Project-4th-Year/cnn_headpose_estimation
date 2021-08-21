@@ -58,18 +58,19 @@ class Hopenet(nn.Module):
         x = self.relu(x)
         x = self.maxpool(x)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
+        x1 = self.layer1(x)
+        x2 = self.layer2(x1)
+        x3 = self.layer3(x2)
+        x4 = self.layer4(x3)
 
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        pre_yaw = self.fc_yaw(x)
-        pre_pitch = self.fc_pitch(x)
-        pre_roll = self.fc_roll(x)
+        x5 = self.avgpool(x4)
+        x6 = x5.view(x5.size(0), -1)
+        pre_yaw = self.fc_yaw(x6)
+        pre_pitch = self.fc_pitch(x6)
+        pre_roll = self.fc_roll(x6)
 
-        return pre_yaw, pre_pitch, pre_roll
+        #return pre_yaw, pre_pitch, pre_roll
+        return x1, x2, x3, x4, pre_yaw, pre_pitch, pre_roll
 
 class ResNet(nn.Module):
     # ResNet for regression of 3 Euler angles.
