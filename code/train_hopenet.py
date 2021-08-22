@@ -183,7 +183,7 @@ if __name__ == '__main__':
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
     saved_state_dict = torch.load('output/snapshots/resnet50_basic_4.pkl')
     teacher_model.load_state_dict(saved_state_dict)
-    teacher_model.eval()
+    # teacher_model.eval()
     for param in teacher_model.parameters():
         param.requires_grad = False
     print(f"Teacher Netowrk Size: {count_parameters_in_MB(teacher_model)}MB")
@@ -236,6 +236,9 @@ if __name__ == '__main__':
 
     model.cuda(gpu)
     teacher_model.cuda(gpu)
+
+    teacher_model.eval()
+
     criterion = nn.CrossEntropyLoss().cuda(gpu)
     reg_criterion = nn.MSELoss().cuda(gpu)
     # Regression loss coefficient
@@ -309,6 +312,12 @@ if __name__ == '__main__':
             yaw_predicted = softmax(yaw)
             pitch_predicted = softmax(pitch)
             roll_predicted = softmax(roll)
+
+            kd_yaw_predicted = softmax(yaw_t)
+            kd_pitch_predicted = softmax(pitch_t)
+            kd_roll_predicted = softmax(roll_t)
+
+
             # print("yaw_predicted:",yaw_predicted)
             # print("pitch_predicted:",pitch_predicted)
             # print("roll_predicted:",roll_predicted)
@@ -320,9 +329,20 @@ if __name__ == '__main__':
             roll_predicted = \
                 torch.sum(roll_predicted * idx_tensor, 1) * 3 - 99
 
-            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)
-            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)
-            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
+            kd_yaw_predicted = \
+                torch.sum(kd_yaw_predicted * idx_tensor, 1) * 3 - 99
+            kd_pitch_predicted = \
+                torch.sum(kd_pitch_predicted * idx_tensor, 1) * 3 - 99
+            kd_roll_predicted = \
+                torch.sum(kd_roll_predicted * idx_tensor, 1) * 3 - 99
+
+            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)*0.5
+            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)*0.5
+            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)*0.5
+
+            loss_reg_yaw += reg_criterion(yaw_predicted, kd_yaw_predicted)*0.5
+            loss_reg_pitch += reg_criterion(pitch_predicted, kd_pitch_predicted)*0.5
+            loss_reg_roll += reg_criterion(roll_predicted, kd_roll_predicted)*0.5
 
             # Total loss
             loss_yaw += alpha * loss_reg_yaw
@@ -337,6 +357,7 @@ if __name__ == '__main__':
             optimizer.step()
             
             if (i+1) % 100 == 0:
+            #if (i+1) % 50 == 0:
                 print ('Epoch [%d/%d], Iter [%d/%d] Losses: '
                     'Yaw %.4f, Pitch %.4f, Roll %.4f'%(
                         epoch+1, 
