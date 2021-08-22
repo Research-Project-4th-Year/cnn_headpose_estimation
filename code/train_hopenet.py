@@ -181,7 +181,7 @@ if __name__ == '__main__':
     #Load teacher network - resnet50
     teacher_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
-    saved_state_dict = torch.load('output/snapshots/resnet50_basic_4.pkl')
+    saved_state_dict = torch.load('output/snapshots/BASIC_1.pkl')
     teacher_model.load_state_dict(saved_state_dict)
     # teacher_model.eval()
     for param in teacher_model.parameters():
@@ -304,9 +304,9 @@ if __name__ == '__main__':
             kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * 0.5
             kd_loss_roll = kd_criterion(roll, roll_t.detach()) * 0.5
 
-            loss_yaw+=kd_loss_yaw
-            loss_pitch+=kd_loss_pitch
-            loss_roll+=kd_loss_roll
+            loss_yaw +=kd_loss_yaw
+            loss_pitch +=kd_loss_pitch
+            loss_roll +=kd_loss_roll
 
             # MSE loss
             yaw_predicted = softmax(yaw)
@@ -336,13 +336,13 @@ if __name__ == '__main__':
             kd_roll_predicted = \
                 torch.sum(kd_roll_predicted * idx_tensor, 1) * 3 - 99
 
-            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)*0.5
-            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)*0.5
-            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)*0.5
+            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)
+            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)
+            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
 
-            loss_reg_yaw += reg_criterion(yaw_predicted, kd_yaw_predicted)*0.5
-            loss_reg_pitch += reg_criterion(pitch_predicted, kd_pitch_predicted)*0.5
-            loss_reg_roll += reg_criterion(roll_predicted, kd_roll_predicted)*0.5
+            # loss_reg_yaw = reg_criterion(yaw_predicted, kd_yaw_predicted)*1.0
+            # loss_reg_pitch = reg_criterion(pitch_predicted, kd_pitch_predicted)*1.0
+            # loss_reg_roll = reg_criterion(roll_predicted, kd_roll_predicted)*1.0
 
             # Total loss
             loss_yaw += alpha * loss_reg_yaw
