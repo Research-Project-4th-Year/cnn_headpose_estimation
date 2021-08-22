@@ -251,7 +251,7 @@ if __name__ == '__main__':
             label_roll_cont = Variable(cont_labels[:,2]).cuda(gpu)
 
             # Forward pass
-            x1, x2, x3, x4, yaw, pitch, roll = model(images)
+            yaw, pitch, roll = model(images)
             #yaw, pitch, roll = model(images)
 
             # Cross entropy loss
