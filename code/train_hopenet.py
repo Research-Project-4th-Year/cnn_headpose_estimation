@@ -121,6 +121,9 @@ def load_filtered_state_dict(model, snapshot):
     model_dict.update(snapshot)
     model.load_state_dict(model_dict)
 
+def count_parameters_in_MB(model):
+    return sum(np.prod(v.size()) for name, v in model.named_parameters())/1e6
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -174,6 +177,20 @@ if __name__ == '__main__':
     else:
         saved_state_dict = torch.load(args.snapshot)
         model.load_state_dict(saved_state_dict)
+    
+    print(f"Student Netowrk Size: {count_parameters_in_MB(model)}MB")
+    print("Student: ",model)
+
+    #Load teacher network - resnet50
+    teacher_model = hopenet.Hopenet(
+            torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
+    saved_state_dict = torch.load('output/snapshots/fitnet_basic.pkl')
+    teacher_model.load_state_dict(saved_state_dict)
+    # teacher_model.eval()
+    for param in teacher_model.parameters():
+        param.requires_grad = False
+    print(f"Teacher Netowrk Size: {count_parameters_in_MB(teacher_model)}MB")
+    print("Teacher:",teacher_model)
 
     print('Loading data.')
 
@@ -220,6 +237,10 @@ if __name__ == '__main__':
         num_workers=2)
 
     model.cuda(gpu)
+    teacher_model.cuda(gpu)
+
+    teacher_model.eval()
+
     criterion = nn.CrossEntropyLoss().cuda(gpu)
     reg_criterion = nn.MSELoss().cuda(gpu)
     # Regression loss coefficient
@@ -253,6 +274,22 @@ if __name__ == '__main__':
             # Forward pass
             #yaw, pitch, roll = model(images)
             x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
+            x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)
+
+            print("Teacher x1: ",x1_t.size())
+            print("Student x1: ",x1.size())
+            print("------------------")
+            print("Teacher x2: ",x2_t.size())
+            print("Student x2: ",x2.size())
+            print("------------------")
+            print("Teacher x3: ",x3_t.size())
+            print("Student x3: ",x3.size())
+            print("------------------")
+            print("Teacher x4: ",x4_t.size())
+            print("Student x4: ",x4.size())
+            print("-----------")
+            print(x4[1].size())
+            exit()
 
             # Cross entropy loss
             loss_yaw = criterion(yaw, label_yaw)
