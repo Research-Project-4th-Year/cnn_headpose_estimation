@@ -30,3 +30,6 @@ python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets
 python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/kd/logit_2015/resnet18_student.pkl  --dataset AFLW2000 --arch ResNet18
 python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/kd/logit_2015/mobilenetv2_student.pkl  --dataset AFLW2000 --arch MobileNetV2
 python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot ../models/kd/logit_2015/squeezenet_1_0_student.pkl  --dataset AFLW2000 --arch Squeezenet_1_0
+
+
+python test_hopenet.py --data_dir ./datasets/300W_LP --filename_list ./datasets/300W_LP/300W_LP_Test_Split_1.txt --snapshot output/snapshots/st_21.pkl  --dataset Pose_300W_LP --arch Squeezenet_1_0
