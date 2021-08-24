@@ -21,4 +21,4 @@ python train_hopenet.py --data_dir datasets/300W-3D --filename_list datasets/300
 python train_hopenet.py --data_dir datasets/300W-3D --filename_list datasets/300W-3D/300W-LP.txt --lr 0.00001 --alpha 1 --batch_size 64
 
 
-python test_hopenet.py --data_dir ./datasets/300W_LP --filename_list ./datasets/300W_LP/300W_LP_Test_Split_1.txt --snapshot output/snapshots/BASIC_1.pkl  --dataset Pose_300W_LP --arch ResNet50
+python test_hopenet.py --data_dir ./datasets/300W_LP --filename_list ./datasets/300W_LP/300W_LP_Test_Split_1.txt --snapshot output/snapshots/fitnet_basic.pkl  --dataset Pose_300W_LP --arch ResNet50

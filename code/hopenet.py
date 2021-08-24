@@ -69,8 +69,8 @@ class Hopenet(nn.Module):
         pre_pitch = self.fc_pitch(x6)
         pre_roll = self.fc_roll(x6)
 
+        return x1, x2, x3, x4, x5, x6, pre_yaw, pre_pitch, pre_roll
         #return pre_yaw, pre_pitch, pre_roll
-        return pre_yaw, pre_pitch, pre_roll
 
 class ResNet(nn.Module):
     # ResNet for regression of 3 Euler angles.
