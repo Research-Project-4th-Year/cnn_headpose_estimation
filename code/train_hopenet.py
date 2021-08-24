@@ -181,7 +181,7 @@ if __name__ == '__main__':
     #Load teacher network - resnet50
     teacher_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
-    saved_state_dict = torch.load('output/snapshots/BASIC_1.pkl')
+    saved_state_dict = torch.load('output/snapshots/resnet50_basic_4.pkl')
     teacher_model.load_state_dict(saved_state_dict)
     # teacher_model.eval()
     for param in teacher_model.parameters():
@@ -267,7 +267,7 @@ if __name__ == '__main__':
             # Binned labels
             label_yaw = Variable(labels[:,0]).cuda(gpu)
             label_pitch = Variable(labels[:,1]).cuda(gpu)
-            label_roll = Variable(labels[:,2]).cuda(gpu)
+            label_roll = Variable(labels[:,2]).cuda(gpu)       
             # print("------Binned Labels Shapes-------")
             # print("yaw:",label_yaw.shape)
             # print("pitch:",label_pitch.shape)
@@ -293,20 +293,26 @@ if __name__ == '__main__':
             # Forward pass
             yaw, pitch, roll = model(images)
             yaw_t, pitch_t, roll_t = teacher_model(images)
-            
+
+
+            #KD alpha,beta
+            kd_alpha = 0.5
+            kd_beta = 1.0 - kd_alpha
+
             # Cross entropy loss
-            loss_yaw = criterion(yaw, label_yaw) * 0.5
-            loss_pitch = criterion(pitch, label_pitch) * 0.5
-            loss_roll = criterion(roll, label_roll) * 0.5
+            loss_yaw = criterion(yaw, label_yaw) * kd_beta
+            loss_pitch = criterion(pitch, label_pitch) * kd_beta
+            loss_roll = criterion(roll, label_roll) * kd_beta
 
             # student loss with soft targets
-            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * 0.5
-            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * 0.5
-            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * 0.5
+            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha
+            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha
+            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha
 
             loss_yaw +=kd_loss_yaw
             loss_pitch +=kd_loss_pitch
             loss_roll +=kd_loss_roll
+
 
             # MSE loss
             yaw_predicted = softmax(yaw)
@@ -336,13 +342,21 @@ if __name__ == '__main__':
             kd_roll_predicted = \
                 torch.sum(kd_roll_predicted * idx_tensor, 1) * 3 - 99
 
-            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)
-            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)
-            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
+            # loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)
+            # loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)
+            # loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
 
-            # loss_reg_yaw = reg_criterion(yaw_predicted, kd_yaw_predicted)*1.0
-            # loss_reg_pitch = reg_criterion(pitch_predicted, kd_pitch_predicted)*1.0
-            # loss_reg_roll = reg_criterion(roll_predicted, kd_roll_predicted)*1.0
+            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)*kd_beta
+            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)*kd_beta
+            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)*kd_beta
+
+            kd_loss_reg_yaw = reg_criterion(yaw_predicted, kd_yaw_predicted)*kd_alpha
+            kd_loss_reg_pitch = reg_criterion(pitch_predicted, kd_pitch_predicted)*kd_alpha
+            kd_loss_reg_roll = reg_criterion(roll_predicted, kd_roll_predicted)*kd_alpha
+
+            loss_reg_yaw +=kd_loss_reg_yaw
+            loss_reg_pitch +=kd_loss_reg_pitch
+            loss_reg_roll +=kd_loss_reg_roll
 
             # Total loss
             loss_yaw += alpha * loss_reg_yaw
