@@ -13,7 +13,7 @@ import torchvision
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
-import datasets, hopenet, hopelessnet
+import datasets, hopenet, hopelessnet, rkd_loss
 import torch.utils.model_zoo as model_zoo
 
 def parse_args():
@@ -57,6 +57,8 @@ def parse_args():
         help='Network architecture, can be: ResNet18, ResNet34, [ResNet50], '
             'ResNet101, ResNet152, Squeezenet_1_0, Squeezenet_1_1, MobileNetV2',
         default='ResNet50', type=str)
+    parser.add_argument('--w_dist', type=float, default=25.0, help='weight for RKD distance')
+    parser.add_argument('--w_angle', type=float, default=50.0, help='weight for RKD angle')
 
     args = parser.parse_args()
     return args
@@ -121,6 +123,9 @@ def load_filtered_state_dict(model, snapshot):
     model_dict.update(snapshot)
     model.load_state_dict(model_dict)
 
+def count_parameters_in_MB(model):
+    return sum(np.prod(v.size()) for name, v in model.named_parameters())/1e6
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -175,6 +180,20 @@ if __name__ == '__main__':
         saved_state_dict = torch.load(args.snapshot)
         model.load_state_dict(saved_state_dict)
 
+    print(f"Student Netowrk Size: {count_parameters_in_MB(model)}MB")
+    print("Student: ",model)
+
+    #Load teacher network - resnet50
+    teacher_model = hopenet.Hopenet(
+            torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
+    saved_state_dict = torch.load('output/snapshots/fitnet_basic.pkl')
+    teacher_model.load_state_dict(saved_state_dict)
+    # teacher_model.eval()
+    for param in teacher_model.parameters():
+        param.requires_grad = False
+    print(f"Teacher Netowrk Size: {count_parameters_in_MB(teacher_model)}MB")
+    print("Teacher:",teacher_model)
+
     print('Loading data.')
 
     transformations = transforms.Compose([transforms.Resize(240),
@@ -220,10 +239,17 @@ if __name__ == '__main__':
         num_workers=2)
 
     model.cuda(gpu)
+    teacher_model.cuda(gpu)
+
+    teacher_model.eval()
+
     criterion = nn.CrossEntropyLoss().cuda(gpu)
     reg_criterion = nn.MSELoss().cuda(gpu)
     # Regression loss coefficient
     alpha = args.alpha
+
+    #Define KD loss function
+    kd_criterion = rkd_loss.RKD(args.w_dist, args.w_angle)
 
     softmax = nn.Softmax(dim=1).cuda(gpu)
     idx_tensor = [idx for idx in range(66)]
@@ -253,11 +279,23 @@ if __name__ == '__main__':
             # Forward pass
             #yaw, pitch, roll = model(images)
             x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
+            x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)
+
 
             # Cross entropy loss
             loss_yaw = criterion(yaw, label_yaw)
             loss_pitch = criterion(pitch, label_pitch)
             loss_roll = criterion(roll, label_roll)
+
+            #KD loss
+            kd_loss = kd_criterion(x6, x6_t.detach()) * 1.0
+            # kd_loss_yaw = kd_criterion(yaw, yaw_t.detach())
+            # kd_loss_pitch = kd_criterion(pitch, pitch_t.detach())
+            # kd_loss_roll = kd_criterion(roll, roll_t.detach())
+
+            # loss_yaw += kd_loss_yaw
+            # loss_pitch += kd_loss_pitch
+            # loss_roll += kd_loss_roll
 
             # MSE loss
             yaw_predicted = softmax(yaw)
@@ -276,9 +314,9 @@ if __name__ == '__main__':
             loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
 
             # Total loss
-            loss_yaw += alpha * loss_reg_yaw
-            loss_pitch += alpha * loss_reg_pitch
-            loss_roll += alpha * loss_reg_roll
+            loss_yaw += (alpha * loss_reg_yaw) + kd_loss
+            loss_pitch += (alpha * loss_reg_pitch) + kd_loss
+            loss_roll += (alpha * loss_reg_roll) + kd_loss
 
             loss_seq = [loss_yaw, loss_pitch, loss_roll]
             grad_seq = \
