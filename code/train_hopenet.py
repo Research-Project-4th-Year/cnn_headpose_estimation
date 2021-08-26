@@ -181,7 +181,7 @@ if __name__ == '__main__':
     #Load teacher network - resnet50
     teacher_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
-    saved_state_dict = torch.load('output/snapshots/resnet50_basic_4.pkl')
+    saved_state_dict = torch.load('output/snapshots/c1.pkl')
     teacher_model.load_state_dict(saved_state_dict)
     # teacher_model.eval()
     for param in teacher_model.parameters():
@@ -213,7 +213,7 @@ if __name__ == '__main__':
         pose_dataset = datasets.AFLW2000(
             args.data_dir, args.filename_list, transformations)
     elif args.dataset == 'BIWI':
-        pose_dataset = datasets.BIWI(
+        pose_dataset = datasets.BIWINEW(
             args.data_dir, args.filename_list, transformations)
     elif args.dataset == 'AFLW':
         pose_dataset = datasets.AFLW(
@@ -291,8 +291,14 @@ if __name__ == '__main__':
             # print("Label_roll:",label_roll_cont)
 
             # Forward pass
-            yaw, pitch, roll = model(images)
-            yaw_t, pitch_t, roll_t = teacher_model(images)
+            if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18':
+                x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
+            elif args.arch == 'MobileNetV2':
+                x1, yaw, pitch, roll = model(images)
+            elif args.arch == 'Squeezenet_1_0':
+                x1, yaw, pitch, roll = model(images)
+
+            x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)
 
 
             #KD alpha,beta
