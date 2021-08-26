@@ -57,6 +57,7 @@ def parse_args():
         help='Network architecture, can be: ResNet18, ResNet34, [ResNet50], '
             'ResNet101, ResNet152, Squeezenet_1_0, Squeezenet_1_1, MobileNetV2',
         default='ResNet50', type=str)
+    parser.add_argument('--weight_decay', type=float, default=0.002, help='weight decay')
 
     args = parser.parse_args()
     return args
@@ -161,6 +162,10 @@ if __name__ == '__main__':
         model = hopelessnet.Hopeless_MobileNetV2(66, 1.0)
         pre_url = \
             'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth'
+    elif args.arch == 'DenseNet201':
+        model = hopenet_densenet201.DenseNet((6, 12, 24, 16), 66)
+        pre_url = \
+            'https://download.pytorch.org/models/densenet201-c1103571.pth'
     else:
         if args.arch != 'ResNet50':
             print('Invalid value for architecture is passed! '
@@ -198,7 +203,7 @@ if __name__ == '__main__':
         pose_dataset = datasets.AFLW2000(
             args.data_dir, args.filename_list, transformations)
     elif args.dataset == 'BIWI':
-        pose_dataset = datasets.BIWI(
+        pose_dataset = datasets.BIWINEW(
             args.data_dir, args.filename_list, transformations)
     elif args.dataset == 'AFLW':
         pose_dataset = datasets.AFLW(
@@ -252,7 +257,12 @@ if __name__ == '__main__':
 
             # Forward pass
             #yaw, pitch, roll = model(images)
-            x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
+            if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18':
+                x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
+            elif args.arch == 'MobileNetV2':
+                x1, yaw, pitch, roll = model(images)
+            elif args.arch == 'Squeezenet_1_0':
+                x1, yaw, pitch, roll = model(images)
 
             # Cross entropy loss
             loss_yaw = criterion(yaw, label_yaw)

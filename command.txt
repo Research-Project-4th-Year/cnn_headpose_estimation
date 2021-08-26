@@ -14,6 +14,8 @@ python test_on_video_dlib.py --snapshot output/snapshots/ResNet50_epoch_45.pkl -
 ##Train Command
 python train_hopenet.py --data_dir datasets/300W_LP --filename_list datasets/300W_LP/300W_LP_Train_Split_1.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 10 --arch ResNet50
 
+python train_hopenet.py --dataset BIWI --data_dir datasets/BIWI --filename_list datasets/BIWI/biwi.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 10 --arch ResNet50
+
 python train_hopenet.py --data_dir datasets/300W_LP --filename_list datasets/300W_LP/300W_LP_filename_filtered.txt --lr 0.000001 --alpha 2 --batch_size 64 --num_epochs 25 --arch ResNet50
 
 python train_hopenet.py --data_dir datasets/300W-3D --filename_list datasets/300W-3D/300W-LP.txt --lr 0.00001 --alpha 2 --batch_size 64
@@ -22,3 +24,10 @@ python train_hopenet.py --data_dir datasets/300W-3D --filename_list datasets/300
 
 
 python test_hopenet.py --data_dir ./datasets/300W_LP --filename_list ./datasets/300W_LP/300W_LP_Test_Split_1.txt --snapshot output/snapshots/fitnet_basic.pkl  --dataset Pose_300W_LP --arch ResNet50
+
+
+############BIWI##################
+python test_hopenet.py --data_dir ./datasets/BIWI/test --filename_list ./datasets/BIWI/test/biwi_test.txt --snapshot output/snapshots/c5.pkl  --dataset BIWI --arch Squeezenet_1_0
+
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI/train --filename_list ./datasets/BIWI/train/biwi_train.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 25 --arch Squeezenet_1_0
+

@@ -114,7 +114,7 @@ class Hopeless_Squeezenet(nn.Module):
         pre_yaw = self.classifier_yaw(x).view(x.size(0), -1)
         pre_pitch = self.classifier_pitch(x).view(x.size(0), -1)
         pre_roll = self.classifier_roll(x).view(x.size(0), -1)
-        return pre_yaw, pre_pitch, pre_roll
+        return x, pre_yaw, pre_pitch, pre_roll
 
 class ConvBNReLU(nn.Sequential):
     def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1):
@@ -220,4 +220,4 @@ class Hopeless_MobileNetV2(nn.Module):
         pre_yaw = self.classifier_yaw(x)
         pre_pitch = self.classifier_pitch(x)
         pre_roll = self.classifier_roll(x)
-        return pre_yaw, pre_pitch, pre_roll
+        return x, pre_yaw, pre_pitch, pre_roll

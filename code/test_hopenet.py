@@ -108,7 +108,7 @@ if __name__ == '__main__':
         pose_dataset = datasets.AFLW2000_ds(
             args.data_dir, args.filename_list, transformations)
     elif args.dataset == 'BIWI':
-        pose_dataset = datasets.BIWI(
+        pose_dataset = datasets.BIWINEW(
             args.data_dir, args.filename_list, transformations)
     elif args.dataset == 'AFLW':
         pose_dataset = datasets.AFLW(
@@ -152,8 +152,13 @@ if __name__ == '__main__':
         label_pitch = cont_labels[:,1].float()
         label_roll = cont_labels[:,2].float()
 
-        x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
-        #yaw, pitch, roll = model(images)
+        if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18':
+            x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
+            #yaw, pitch, roll = model(images)
+        elif args.arch == 'MobileNetV2':
+            x1, yaw, pitch, roll = model(images)
+        elif args.arch == 'Squeezenet_1_0':
+                x1, yaw, pitch, roll = model(images)
 
         # Binned predictions
         _, yaw_bpred = torch.max(yaw.data, 1)
