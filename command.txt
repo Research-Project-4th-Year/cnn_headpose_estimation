@@ -29,5 +29,5 @@ python test_hopenet.py --data_dir ./datasets/300W_LP --filename_list ./datasets/
 ############BIWI##################
 python test_hopenet.py --data_dir ./datasets/BIWI/test --filename_list ./datasets/BIWI/test/biwi_test.txt --snapshot output/snapshots/c5.pkl  --dataset BIWI --arch Squeezenet_1_0
 
-python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI/train --filename_list ./datasets/BIWI/train/biwi_train.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 25 --arch Squeezenet_1_0
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI/train --filename_list ./datasets/BIWI/train/biwi_train.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 25 --arch DenseNet201
 

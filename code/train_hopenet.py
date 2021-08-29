@@ -13,8 +13,9 @@ import torchvision
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
-import datasets, hopenet, hopelessnet
+import datasets, hopenet, hopelessnet, densenet201
 import torch.utils.model_zoo as model_zoo
+
 
 def parse_args():
     """Parse input arguments."""
@@ -122,6 +123,7 @@ def load_filtered_state_dict(model, snapshot):
     model_dict.update(snapshot)
     model.load_state_dict(model_dict)
 
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -163,7 +165,7 @@ if __name__ == '__main__':
         pre_url = \
             'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth'
     elif args.arch == 'DenseNet201':
-        model = hopenet_densenet201.DenseNet((6, 12, 24, 16), 66)
+        model = densenet201.DenseNet(32, (6, 12, 24, 16), 64,66)
         pre_url = \
             'https://download.pytorch.org/models/densenet201-c1103571.pth'
     else:

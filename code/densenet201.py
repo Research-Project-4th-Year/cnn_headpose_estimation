@@ -4,10 +4,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as cp
 from collections import OrderedDict
-from .utils import load_state_dict_from_url
+from torch.utils.model_zoo import load_url as load_state_dict_from_url
 from torch import Tensor
-from torch.jit.annotations import List
-
+from typing import Any, List, Tuple
 
 
 class _DenseLayer(nn.Module):
@@ -40,23 +39,8 @@ class _DenseLayer(nn.Module):
                 return True
         return False
 
-    @torch.jit.unused  # noqa: T484
-    def call_checkpoint_bottleneck(self, input):
-        # type: (List[Tensor]) -> Tensor
-        def closure(*inputs):
-            return self.bn_function(inputs)
 
-        return cp.checkpoint(closure, *input)
 
-    @torch.jit._overload_method  # noqa: F811
-    def forward(self, input):
-        # type: (List[Tensor]) -> (Tensor)
-        pass
-
-    @torch.jit._overload_method  # noqa: F811
-    def forward(self, input):
-        # type: (Tensor) -> (Tensor)
-        pass
 
     # torchscript does not yet support *args, so we overload method
     # allowing it to take either a List[Tensor] or single Tensor
@@ -116,8 +100,8 @@ class _Transition(nn.Sequential):
 
 class DenseNet(nn.Module):
 
-    def __init__(self, block_config, num_classes, growth_rate=32, 
-                 num_init_features=64, bn_size=4, drop_rate=0,  memory_efficient=False):
+    def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
+                 num_init_features=64, num_classes=1000, bn_size=4, drop_rate=0,  memory_efficient=False):
 
         super(DenseNet, self).__init__()
 
@@ -157,6 +141,7 @@ class DenseNet(nn.Module):
         self.classifier_pitch = nn.Linear(num_features, num_classes)
         self.classifier_roll = nn.Linear(num_features, num_classes)
 
+
         # Official init from torch repo.
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -172,11 +157,10 @@ class DenseNet(nn.Module):
         out = F.relu(features, inplace=True)
         out = F.adaptive_avg_pool2d(out, (1, 1))
         out = torch.flatten(out, 1)
-
+        
         pre_yaw = self.classifier_yaw(out)
         pre_pitch = self.classifier_pitch(out)
         pre_roll = self.classifier_roll(out)
 
         return out, pre_yaw, pre_pitch, pre_roll
-
 
