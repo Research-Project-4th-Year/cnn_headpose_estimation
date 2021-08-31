@@ -13,7 +13,7 @@ import torchvision
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
-import datasets, hopenet, hopelessnet, densenet201
+import datasets, hopenet, hopelessnet, seresnet50, densenet201
 import torch.utils.model_zoo as model_zoo
 
 
@@ -65,9 +65,9 @@ def parse_args():
 
 def get_ignored_params(model, arch):
     # Generator function that yields ignored params.
-    if arch.find('ResNet') >= 0:
+    if arch.find('ResNet') >= 0 or arch.find('SEResNet50') >= 0:
         b = [model.conv1, model.bn1, model.fc_finetune]
-    elif arch.find('Squeezenet') >= 0 or arch.find('MobileNetV2') >= 0:
+    elif arch.find('Squeezenet') >= 0 or arch.find('MobileNetV2') >= 0 or arch.find('DenseNet201') >= 0:
         b = [model.features[0]]
     else:
         raise('Invalid architecture is passed!')
@@ -82,9 +82,9 @@ def get_ignored_params(model, arch):
 
 def get_non_ignored_params(model, arch):
     # Generator function that yields params that will be optimized.
-    if arch.find('ResNet') >= 0:
+    if arch.find('ResNet') >= 0 or arch.find('SEResNet50') >= 0:
         b = [model.layer1, model.layer2, model.layer3, model.layer4]
-    elif arch.find('Squeezenet') >= 0 or arch.find('MobileNetV2') >= 0:
+    elif arch.find('Squeezenet') >= 0 or arch.find('MobileNetV2') >= 0 or arch.find('DenseNet201') >= 0:
         b = [model.features[1:]]
     else:
         raise('Invalid architecture is passed!')
@@ -99,9 +99,9 @@ def get_non_ignored_params(model, arch):
 
 def get_fc_params(model, arch):
     # Generator function that yields fc layer params.
-    if arch.find('ResNet') >= 0:
+    if arch.find('ResNet') >= 0 or arch.find('SEResNet50') >= 0:
         b = [model.fc_yaw, model.fc_pitch, model.fc_roll]
-    elif arch.find('Squeezenet') >= 0 or arch.find('MobileNetV2') >= 0:
+    elif arch.find('Squeezenet') >= 0 or arch.find('MobileNetV2') >= 0 or arch.find('DenseNet201') >= 0:
         b = [
             model.classifier_yaw, 
             model.classifier_pitch, 
@@ -121,7 +121,10 @@ def load_filtered_state_dict(model, snapshot):
     model_dict = model.state_dict()
     snapshot = {k: v for k, v in snapshot.items() if k in model_dict}
     model_dict.update(snapshot)
-    model.load_state_dict(model_dict)
+    try:
+        model.load_state_dict(model_dict)
+    except RuntimeError as e:
+        print('Ignoring "' + str(e) + '"')
 
 
 if __name__ == '__main__':
@@ -164,10 +167,12 @@ if __name__ == '__main__':
         model = hopelessnet.Hopeless_MobileNetV2(66, 1.0)
         pre_url = \
             'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth'
+    elif args.arch == 'SEResNet50':
+        model = seresnet50.se_resnet50(num_classes=66)
+        pre_url = 'https://github.com/moskomule/senet.pytorch/releases/download/archive/seresnet50-60a8950a85b2b.pkl'
     elif args.arch == 'DenseNet201':
-        model = densenet201.DenseNet(32, (6, 12, 24, 16), 64,66)
-        pre_url = \
-            'https://download.pytorch.org/models/densenet201-c1103571.pth'
+        model = densenet201.DenseNet_HopeNet(32, (6, 12, 24, 16), 64,66)
+        pre_url = 'https://download.pytorch.org/models/densenet201-c1103571.pth'
     else:
         if args.arch != 'ResNet50':
             print('Invalid value for architecture is passed! '
@@ -258,12 +263,9 @@ if __name__ == '__main__':
             label_roll_cont = Variable(cont_labels[:,2]).cuda(gpu)
 
             # Forward pass
-            #yaw, pitch, roll = model(images)
-            if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18':
+            if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18' or args.arch == 'SEResNet50':
                 x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
-            elif args.arch == 'MobileNetV2':
-                x1, yaw, pitch, roll = model(images)
-            elif args.arch == 'Squeezenet_1_0':
+            elif args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or args.arch == 'DenseNet201' or args.arch == 'MobileNetV2':
                 x1, yaw, pitch, roll = model(images)
 
             # Cross entropy loss

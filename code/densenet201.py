@@ -98,12 +98,12 @@ class _Transition(nn.Sequential):
         self.add_module('pool', nn.AvgPool2d(kernel_size=2, stride=2))
 
 
-class DenseNet(nn.Module):
+class DenseNet_HopeNet(nn.Module):
 
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
                  num_init_features=64, num_classes=1000, bn_size=4, drop_rate=0,  memory_efficient=False):
 
-        super(DenseNet, self).__init__()
+        super(DenseNet_HopeNet, self).__init__()
 
         # First convolution
         self.features = nn.Sequential(OrderedDict([
@@ -163,4 +163,3 @@ class DenseNet(nn.Module):
         pre_roll = self.classifier_roll(out)
 
         return out, pre_yaw, pre_pitch, pre_roll
-

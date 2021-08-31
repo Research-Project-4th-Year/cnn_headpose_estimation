@@ -14,7 +14,7 @@ import torchvision
 import torch.nn.functional as F
 from PIL import Image
 
-import datasets, hopenet, hopelessnet, utils
+import datasets, hopenet, hopelessnet, utils, seresnet50, densenet201
 
 from skimage import io
 import dlib
@@ -87,6 +87,12 @@ if __name__ == '__main__':
         model = hopelessnet.Hopeless_Squeezenet(args.arch, 66)
     elif args.arch == 'MobileNetV2':
         model = hopelessnet.Hopeless_MobileNetV2(66, 1.0)
+    elif args.arch == 'SEResNet50':
+        model = seresnet50.se_resnet50(num_classes=66)
+        pre_url = 'https://github.com/moskomule/senet.pytorch/releases/download/archive/seresnet50-60a8950a85b2b.pkl'
+    elif args.arch == 'DenseNet201':
+        model = densenet201.DenseNet_HopeNet(32, (6, 12, 24, 16), 64,66)
+        pre_url = 'https://download.pytorch.org/models/densenet201-c1103571.pth'
     else:
         if args.arch != 'ResNet50':
             print('Invalid value for architecture is passed! '
@@ -181,7 +187,11 @@ if __name__ == '__main__':
                 img = Variable(img).cuda(gpu)
 
                 start_time1 = time.time()
-                yaw, pitch, roll = model(img)
+                if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18' or args.arch == 'SEResNet50':
+                    x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(img)
+                elif args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or args.arch == 'DenseNet201' or args.arch == 'MobileNetV2':
+                    x1, yaw, pitch, roll = model(img)
+                # yaw, pitch, roll = model(img)
                 start_time2 = time.time()
                 total_time+=start_time2-start_time1
 
@@ -206,4 +216,5 @@ if __name__ == '__main__':
     out.release()
     video.release()
 print(total_time)
-print("--- %s seconds ---" % (time.time() - start_time))
+print("--- %sPrediction Time (seconds) ---" % total_time)
+print("--- %sTotal Time (seconds) ---" % (time.time() - start_time))
