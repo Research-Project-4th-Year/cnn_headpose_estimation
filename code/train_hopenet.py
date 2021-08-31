@@ -302,7 +302,7 @@ if __name__ == '__main__':
             # Forward pass
             if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18' or args.arch == 'SEResNet50':
                 x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
-            elif args.arch == 'MobileNetV2' or args.arch == 'Squeezenet_1_0' or args.arch == 'DenseNet201':
+            elif args.arch == 'MobileNetV2' or args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or args.arch == 'DenseNet201':
                 x1, yaw, pitch, roll = model(images)
 
             x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)

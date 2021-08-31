@@ -79,9 +79,9 @@ if __name__ == '__main__':
         model = hopelessnet.Hopeless_Squeezenet(args.arch, 66)
     elif args.arch == 'MobileNetV2':
         model = hopelessnet.Hopeless_MobileNetV2(66, 1.0)
-    elif args.arch == 'SEResNext50':
-        model = seresnext.se_resnext50(num_classes=66)
-        pre_url = 'https://download.pytorch.org/models/resnext50_32x4d-7cdf4587.pth'
+    elif args.arch == 'SEResNet50':
+        model = seresnet50.se_resnet50(num_classes=66)
+        pre_url = 'https://github.com/moskomule/senet.pytorch/releases/download/archive/seresnet50-60a8950a85b2b.pkl'
     elif args.arch == 'DenseNet201':
         model = densenet201.DenseNet_HopeNet(32, (6, 12, 24, 16), 64,66)
         pre_url = 'https://download.pytorch.org/models/densenet201-c1103571.pth'
@@ -166,7 +166,7 @@ if __name__ == '__main__':
         #yaw, pitch, roll = model(images)
         if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18' or args.arch == 'SEResNet50':
             x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
-        elif args.arch == 'MobileNetV2' or args.arch == 'Squeezenet_1_0' or  args.arch == 'DenseNet201':
+        elif args.arch == 'MobileNetV2' or args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or  args.arch == 'DenseNet201':
             x1, yaw, pitch, roll = model(images)
 
         # Binned predictions
