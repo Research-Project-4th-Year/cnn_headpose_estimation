@@ -13,7 +13,7 @@ import torchvision
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
-import datasets, hopenet, hopelessnet, rkd_loss
+import datasets, hopenet, hopelessnet, rkd_loss, seresnext
 import torch.utils.model_zoo as model_zoo
 
 def parse_args():
@@ -65,7 +65,7 @@ def parse_args():
 
 def get_ignored_params(model, arch):
     # Generator function that yields ignored params.
-    if arch.find('ResNet') >= 0:
+    if arch.find('ResNet') >= 0 or arch.find('SEResNext50') >= 0:
         b = [model.conv1, model.bn1, model.fc_finetune]
     elif arch.find('Squeezenet') >= 0 or arch.find('MobileNetV2') >= 0:
         b = [model.features[0]]
@@ -82,7 +82,7 @@ def get_ignored_params(model, arch):
 
 def get_non_ignored_params(model, arch):
     # Generator function that yields params that will be optimized.
-    if arch.find('ResNet') >= 0:
+    if arch.find('ResNet') >= 0 or arch.find('SEResNext50') >= 0:
         b = [model.layer1, model.layer2, model.layer3, model.layer4]
     elif arch.find('Squeezenet') >= 0 or arch.find('MobileNetV2') >= 0:
         b = [model.features[1:]]
@@ -99,7 +99,7 @@ def get_non_ignored_params(model, arch):
 
 def get_fc_params(model, arch):
     # Generator function that yields fc layer params.
-    if arch.find('ResNet') >= 0:
+    if arch.find('ResNet') >= 0 or arch.find('SEResNext50') >= 0:
         b = [model.fc_yaw, model.fc_pitch, model.fc_roll]
     elif arch.find('Squeezenet') >= 0 or arch.find('MobileNetV2') >= 0:
         b = [
@@ -166,6 +166,9 @@ if __name__ == '__main__':
         model = hopelessnet.Hopeless_MobileNetV2(66, 1.0)
         pre_url = \
             'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth'
+    elif args.arch == 'SEResNext50':
+        model = seresnext.se_resnext50(num_classes=66)
+        pre_url = 'https://download.pytorch.org/models/resnext50_32x4d-7cdf4587.pth'
     else:
         if args.arch != 'ResNet50':
             print('Invalid value for architecture is passed! '
@@ -182,11 +185,12 @@ if __name__ == '__main__':
 
     print(f"Student Netowrk Size: {count_parameters_in_MB(model)}MB")
     print("Student: ",model)
+    #exit()
 
     #Load teacher network - resnet50
     teacher_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
-    saved_state_dict = torch.load('output/snapshots/fitnet_basic.pkl')
+    saved_state_dict = torch.load('output/snapshots/c1.pkl')
     teacher_model.load_state_dict(saved_state_dict)
     # teacher_model.eval()
     for param in teacher_model.parameters():
@@ -217,7 +221,7 @@ if __name__ == '__main__':
         pose_dataset = datasets.AFLW2000(
             args.data_dir, args.filename_list, transformations)
     elif args.dataset == 'BIWI':
-        pose_dataset = datasets.BIWI(
+        pose_dataset = datasets.BIWINEW(
             args.data_dir, args.filename_list, transformations)
     elif args.dataset == 'AFLW':
         pose_dataset = datasets.AFLW(
@@ -278,29 +282,64 @@ if __name__ == '__main__':
 
             # Forward pass
             #yaw, pitch, roll = model(images)
-            x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
+            if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18':
+                x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
+            elif args.arch == 'MobileNetV2':
+                x1, yaw, pitch, roll = model(images)
+            elif args.arch == 'Squeezenet_1_0':
+                x1, yaw, pitch, roll = model(images)
+            
             x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)
 
 
+            #KD alpha,beta
+            # kd_alpha = 1.0
+            # kd_beta = 1.0 - kd_alpha
+
             # Cross entropy loss
-            loss_yaw = criterion(yaw, label_yaw)
-            loss_pitch = criterion(pitch, label_pitch)
-            loss_roll = criterion(roll, label_roll)
-
+            loss_yaw = criterion(yaw, label_yaw) * 0.5
+            loss_pitch = criterion(pitch, label_pitch) * 0.5
+            loss_roll = criterion(roll, label_roll) * 0.5
+            # loss_yaw = criterion(yaw, label_yaw) 
+            # loss_pitch = criterion(pitch, label_pitch) 
+            # loss_roll = criterion(roll, label_roll) 
+            
             #KD loss
-            kd_loss = kd_criterion(x6, x6_t.detach()) * 1.0
-            # kd_loss_yaw = kd_criterion(yaw, yaw_t.detach())
-            # kd_loss_pitch = kd_criterion(pitch, pitch_t.detach())
-            # kd_loss_roll = kd_criterion(roll, roll_t.detach())
+            if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18':
+                #kd_loss = kd_criterion(x6, x6_t.detach()) * 0.5
+                kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * 0.5
+                kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * 0.5
+                kd_loss_roll = kd_criterion(roll, roll_t.detach()) * 0.5
+            elif args.arch == 'MobileNetV2' or args.arch == 'Squeezenet_1_0':
+                #kd_loss = kd_criterion(x1, x6_t.detach())* 0.5
+                kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * 0.5
+                kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * 0.5
+                kd_loss_roll = kd_criterion(roll, roll_t.detach()) * 0.5
+           
 
-            # loss_yaw += kd_loss_yaw
-            # loss_pitch += kd_loss_pitch
-            # loss_roll += kd_loss_roll
+            # loss_yaw += kd_loss
+            # loss_pitch += kd_loss
+            # loss_roll += kd_loss
+            loss_yaw += kd_loss_yaw
+            loss_pitch += kd_loss_pitch
+            loss_roll += kd_loss_roll
+            # if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18':
+            #     loss_yaw += kd_loss
+            #     loss_pitch += kd_loss
+            #     loss_roll += kd_loss
+            # elif args.arch == 'MobileNetV2' or args.arch == 'Squeezenet_1_0':
+            #     loss_yaw += kd_loss_yaw
+            #     loss_pitch += kd_loss_pitch
+            #     loss_roll += kd_loss_roll
 
             # MSE loss
             yaw_predicted = softmax(yaw)
             pitch_predicted = softmax(pitch)
             roll_predicted = softmax(roll)
+
+            kd_yaw_predicted = softmax(yaw_t)
+            kd_pitch_predicted = softmax(pitch_t)
+            kd_roll_predicted = softmax(roll_t)
 
             yaw_predicted = \
                 torch.sum(yaw_predicted * idx_tensor, 1) * 3 - 99
@@ -309,14 +348,29 @@ if __name__ == '__main__':
             roll_predicted = \
                 torch.sum(roll_predicted * idx_tensor, 1) * 3 - 99
 
-            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)
-            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)
-            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
+            kd_yaw_predicted = \
+                torch.sum(kd_yaw_predicted * idx_tensor, 1) * 3 - 99
+            kd_pitch_predicted = \
+                torch.sum(kd_pitch_predicted * idx_tensor, 1) * 3 - 99
+            kd_roll_predicted = \
+                torch.sum(kd_roll_predicted * idx_tensor, 1) * 3 - 99
+
+            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)*0.5
+            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)*0.5
+            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)*0.5
+
+            kd_loss_reg_yaw = reg_criterion(yaw_predicted, kd_yaw_predicted)*0.5
+            kd_loss_reg_pitch = reg_criterion(pitch_predicted, kd_pitch_predicted)*0.5
+            kd_loss_reg_roll = reg_criterion(roll_predicted, kd_roll_predicted)*0.5
+
+            loss_reg_yaw +=kd_loss_reg_yaw
+            loss_reg_pitch +=kd_loss_reg_pitch
+            loss_reg_roll +=kd_loss_reg_roll
 
             # Total loss
-            loss_yaw += (alpha * loss_reg_yaw) + kd_loss
-            loss_pitch += (alpha * loss_reg_pitch) + kd_loss
-            loss_roll += (alpha * loss_reg_roll) + kd_loss
+            loss_yaw += alpha * loss_reg_yaw
+            loss_pitch += alpha * loss_reg_pitch
+            loss_roll += alpha * loss_reg_roll
 
             loss_seq = [loss_yaw, loss_pitch, loss_roll]
             grad_seq = \

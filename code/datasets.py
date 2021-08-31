@@ -566,3 +566,43 @@ class BIWI(Dataset):
     def __len__(self):
         # 15,667
         return self.length
+
+class BIWINEW(Dataset):
+    def __init__(self, data_dir, filename_path, transform, img_ext='.jpg', annot_ext='.txt', image_mode='RGB'):
+        self.data_dir = data_dir
+        self.transform = transform
+        self.img_ext = img_ext
+        self.annot_ext = annot_ext
+
+        filename_list = get_list_from_filenames(filename_path)
+
+        self.X_train = filename_list
+        self.y_train = filename_list
+        self.image_mode = image_mode
+        self.length = len(filename_list)
+
+    def __getitem__(self, index):
+        img = Image.open(os.path.join(self.data_dir, self.X_train[index] + self.img_ext))
+        img = img.convert(self.image_mode)
+        pose_path = os.path.join(self.data_dir, self.y_train[index] + self.annot_ext)
+
+        pose_value = open(pose_path, 'r').read()[:-1]
+        
+        yaw, pitch, roll = pose_value.split(' ')
+        yaw, pitch, roll = float(yaw), float(pitch), float(roll)
+
+        # Bin values
+        bins = np.array(range(-99, 102, 3))
+        binned_pose = np.digitize([yaw, pitch, roll], bins) - 1
+
+        labels = torch.LongTensor(binned_pose)
+        cont_labels = torch.FloatTensor([yaw, pitch, roll])
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img, labels, cont_labels, self.X_train[index]
+
+    def __len__(self):
+        # 15,667
+        return self.length
