@@ -286,7 +286,7 @@ if __name__ == '__main__':
                 x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
             elif args.arch == 'MobileNetV2':
                 x1, yaw, pitch, roll = model(images)
-            elif args.arch == 'Squeezenet_1_0':
+            elif args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1':
                 x1, yaw, pitch, roll = model(images)
             
             x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)
@@ -297,12 +297,12 @@ if __name__ == '__main__':
             # kd_beta = 1.0 - kd_alpha
 
             # Cross entropy loss
-            loss_yaw = criterion(yaw, label_yaw) * 0.5
-            loss_pitch = criterion(pitch, label_pitch) * 0.5
-            loss_roll = criterion(roll, label_roll) * 0.5
-            # loss_yaw = criterion(yaw, label_yaw) 
-            # loss_pitch = criterion(pitch, label_pitch) 
-            # loss_roll = criterion(roll, label_roll) 
+            # loss_yaw = criterion(yaw, label_yaw) * 0.5
+            # loss_pitch = criterion(pitch, label_pitch) * 0.5
+            # loss_roll = criterion(roll, label_roll) * 0.5
+            loss_yaw = criterion(yaw, label_yaw) 
+            loss_pitch = criterion(pitch, label_pitch) 
+            loss_roll = criterion(roll, label_roll) 
             
             #KD loss
             if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18':
@@ -310,7 +310,7 @@ if __name__ == '__main__':
                 kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * 0.5
                 kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * 0.5
                 kd_loss_roll = kd_criterion(roll, roll_t.detach()) * 0.5
-            elif args.arch == 'MobileNetV2' or args.arch == 'Squeezenet_1_0':
+            elif args.arch == 'MobileNetV2' or args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1':
                 #kd_loss = kd_criterion(x1, x6_t.detach())* 0.5
                 kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * 0.5
                 kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * 0.5
