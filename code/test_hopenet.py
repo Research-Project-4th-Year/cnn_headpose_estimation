@@ -162,7 +162,7 @@ if __name__ == '__main__':
             x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
             #yaw, pitch, roll = model(images)
         elif args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or args.arch == 'DenseNet201' or args.arch == 'MobileNetV2':
-                x1, yaw, pitch, roll = model(images)
+            x1, yaw, pitch, roll = model(images)
 
         # Binned predictions
         _, yaw_bpred = torch.max(yaw.data, 1)

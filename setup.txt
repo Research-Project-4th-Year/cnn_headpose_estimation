@@ -9,3 +9,9 @@ pip install scipy==1.4.1
 pip install opencv-python==4.2.0.32
 
 pip install scikit-image==0.16.1
+
+#Unistall
+pip install pytorchtools
+pip install pytorch-tools==0.1.9
+
+pip uninstall pytorchtools

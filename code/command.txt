@@ -1,0 +1,59 @@
+------------------ Create file name list-----------------------
+python create_filename_list.py --root_dir ./datasets/AFLW2000
+
+
+-------------------Test with datasets-------------------
+python test_hopenet.py --snapshot ../models//hopenet_snapshot_a1.pkl --data_dir datasets//AFW
+
+python test_hopenet.py --data_dir ./datasets/AFLW2000 --filename_list ./datasets/AFLW2000/files.txt --snapshot output/snapshots/fitnet_resnet50_basic.pkl  --dataset AFLW2000 --arch ResNet50
+
+python test_hopenet.py --data_dir datasets/AFLW2000 --filename_list datasets/AFLW2000/files.txt --snapshot output/snapshots/squeezenet1_0_basic.pkl --dataset AFLW2000 --arch Squeezenet_1_0
+
+python test_hopenet.py --data_dir ./datasets/300W_LP --filename_list ./datasets/300W_LP/300W_LP_Test_Split_1.txt --snapshot output/snapshots/fitnet_basic.pkl  --dataset Pose_300W_LP --arch ResNet50
+
+---------------------Test with video--------------------------
+python test_on_video_dlib.py --snapshot output/snapshots/c1.pkl --video video/Game_of_Thrones.avi --face_model ../models/mmod_human_face_detector.dat --n_frames 200 --arch ResNet50
+
+python test_on_video.py --snapshot output/snapshots/resnet50_basic_1.pkl --video video/Game_of_Thrones.avi
+
+
+----------------------Train Command-----------------------------
+python train_hopenet.py --data_dir datasets/300W_LP --filename_list datasets/300W_LP/300W_LP_Train_Split_1.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 10 --arch ResNet50
+
+python train_hopenet.py --dataset BIWI --data_dir datasets/BIWI --filename_list datasets/BIWI/biwi.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 10 --arch ResNet50
+
+python train_hopenet.py --data_dir datasets/300W_LP --filename_list datasets/300W_LP/300W_LP_filename_filtered.txt --lr 0.000001 --alpha 2 --batch_size 64 --num_epochs 25 --arch ResNet50
+
+python train_hopenet.py --data_dir datasets/300W-3D --filename_list datasets/300W-3D/300W-LP.txt --lr 0.00001 --alpha 2 --batch_size 64
+
+python train_hopenet.py --data_dir datasets/300W-3D --filename_list datasets/300W-3D/300W-LP.txt --lr 0.00001 --alpha 1 --batch_size 64
+
+
+
+
+
+############ Train/Test BIWI##################
+python test_hopenet.py --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_test.txt --snapshot output/snapshots/basic_models/c1.pkl  --dataset BIWI --arch ResNet50
+
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI/train --filename_list ./datasets/BIWI/train/biwi_train.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 15 --arch MobileNetV2
+
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_train.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 50 --arch Squeezenet_1_0
+
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI/train --filename_list ./datasets/BIWI/train/biwi_train.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 25 --arch DenseNet201
+
+
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_train.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 100 --arch Squeezenet_1_0
+
+python test_hopenet.py  --dataset BIWI --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_test.txt --snapshot output/snapshots/Squeezenet_1_0_Basic.pkl  --arch Squeezenet_1_0
+
+#--------------------------------
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_train_1.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 50 --arch Squeezenet_1_0
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_train_2.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 50 --arch Squeezenet_1_0
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_train_3.txt --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 50 --arch Squeezenet_1_0
+
+python test_hopenet.py  --dataset BIWI --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_test_1.txt --snapshot output/snapshots/Squeezenet_1_0_Basic.pkl  --arch Squeezenet_1_0
+python test_hopenet.py  --dataset BIWI --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_test_2.txt --snapshot output/snapshots/Squeezenet_1_0_Basic.pkl  --arch Squeezenet_1_0
+python test_hopenet.py  --dataset BIWI --data_dir ./datasets/BIWI --filename_list ./datasets/BIWI/biwi_test_3.txt --snapshot output/snapshots/Squeezenet_1_0_Basic.pkl  --arch Squeezenet_1_0
+
+#--------------------------------
+python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 50 --arch ResNet50

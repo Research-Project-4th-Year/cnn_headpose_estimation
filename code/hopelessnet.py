@@ -4,6 +4,7 @@ from torch.autograd import Variable
 import torch.nn.init as init
 import math
 import torch.nn.functional as F
+from torch import Tensor
 
 from torchvision import models as tvmodels
 
@@ -214,9 +215,12 @@ class Hopeless_MobileNetV2(nn.Module):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.zeros_(m.bias)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x = self.features(x)
-        x = x.mean([2, 3])
+        #x = x.mean([2, 3])
+        x = nn.functional.adaptive_avg_pool2d(x, (1, 1))
+        x = torch.flatten(x, 1)
+
         pre_yaw = self.classifier_yaw(x)
         pre_pitch = self.classifier_pitch(x)
         pre_roll = self.classifier_roll(x)
