@@ -1,8 +1,0 @@
-1) Test
-  Dataset: AFLW2000 
-  Pre_trained_model: hopenet_snapshot_a1.pkl
-  Result: Test error in degrees of the model on the 1969 test images. Yaw: 5.4517, Pitch: 6.3541, Roll: 5.3127, MAE: 5.7062
-
-2) Train(ephocs = 2, batch_size = 10)
-   Train/Test: AFLW2000 
-   Result: Test error in degrees of the model on the 1969 test images. Yaw: 7.2070, Pitch: 9.4369, Roll: 12.6832, MAE: 9.7757
