@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
 
-import datasets, hopenet, hopelessnet, seresnet50, densenet201, utils
+import datasets, hopenet, hopelessnet, seresnet50, densenet201, utils, st_loss, wasserstein_distance_loss
 import torch.utils.model_zoo as model_zoo
 import time
 start_time = time.time()
@@ -69,10 +69,20 @@ def parse_args():
         help='Network architecture, can be: ResNet18, ResNet34, [ResNet50], '
             'ResNet101, ResNet152, Squeezenet_1_0, Squeezenet_1_1, MobileNetV2',
         default='ResNet50', type=str)
-    parser.add_argument('--weight_decay', type=float, default=0.002, help='weight decay')
+    parser.add_argument('--temperature', dest='temperature', type=float, default=2.0, help='Temperature')
+    parser.add_argument('--kd_alpha', dest='kd_alpha', type=float, default=2.0, help='Knowledge Distillation Alpha')
     parser.add_argument(
         '--patience', dest='patience', help='Early stopping patience number.',
-        default=15, type=int)
+        default=20, type=int)
+    parser.add_argument(
+        '--kd_alpha_dynamic', dest='kd_alpha_dynamic', help='Knowledge Distillation Alpha .',
+        default=False, type=bool)
+    parser.add_argument(
+        '--kd_loss', dest='kd_loss', help='Knowledge Distillation loss function .',
+        default='kl', type=str)
+    parser.add_argument(
+        '--change_t_s', dest='change_t_s', help='Change training procedure teacher and student according to MAE.',
+        default=False, type=bool)
 
     args = parser.parse_args()
     return args
@@ -254,6 +264,9 @@ def validate(val_loader, model, criterion, alpha, args):
 
         return yaw_error, pitch_error, roll_error, total_error.item(), total_loss.item(), total
 
+def count_parameters_in_MB(model):
+    return sum(np.prod(v.size()) for name, v in model.named_parameters())/1e6
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -265,7 +278,7 @@ if __name__ == '__main__':
     if not os.path.exists('output/snapshots'):
         os.makedirs('output/snapshots')
 
-    # Network architecture
+    # Student architecture
     if args.arch == 'ResNet18':
         model = hopenet.Hopenet(
             torchvision.models.resnet.BasicBlock, [2, 2, 2, 2], 66)
@@ -314,6 +327,20 @@ if __name__ == '__main__':
         saved_state_dict = torch.load(args.snapshot)
         model.load_state_dict(saved_state_dict)
 
+    print(f"Student Netowrk Size: {count_parameters_in_MB(model)}MB")
+    print("Student: ",model)
+
+    #Load teacher network - resnet50
+    teacher_model = hopenet.Hopenet(
+            torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
+    saved_state_dict = torch.load('output/snapshots/basic_models/d1.pkl')
+    teacher_model.load_state_dict(saved_state_dict)
+    # teacher_model.eval()
+    for param in teacher_model.parameters():
+        param.requires_grad = False
+    print(f"Teacher Netowrk Size: {count_parameters_in_MB(teacher_model)}MB")
+    print("Teacher:",teacher_model)
+
     print('Loading data.')
 
     transformations = transforms.Compose([transforms.Resize(240),
@@ -351,10 +378,24 @@ if __name__ == '__main__':
         num_workers=2)
     
     model.cuda(gpu)
+    teacher_model.cuda(gpu)
+
+    teacher_model.eval()
+
     criterion = nn.CrossEntropyLoss().cuda(gpu)
     reg_criterion = nn.MSELoss().cuda(gpu)
     # Regression loss coefficient
     alpha = args.alpha
+
+    #define kd loss function
+    print(args.temperature)
+    kd_criterion = st_loss.SoftTarget(args.temperature)
+    if args.kd_loss == 'kl' :
+        kd_criterion = st_loss.SoftTarget(args.temperature)
+        print("Loss Function is KL")
+    elif args.kd_loss == 'ws' :
+        kd_criterion == wasserstein_distance_loss.SinkhornDistance(0.0001, 150, 'mean')
+        print("Loss is WS")
 
     softmax = nn.Softmax(dim=1).cuda(gpu)
     idx_tensor = [idx for idx in range(66)]
@@ -403,15 +444,50 @@ if __name__ == '__main__':
             elif args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or args.arch == 'DenseNet201' or args.arch == 'MobileNetV2':
                 x1, yaw, pitch, roll = model(images)
 
+            x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)
+
+            #KD alpha,beta
+            kd_alpha = 0.5
+            if args.kd_alpha_dynamic :
+                 kd_alpha = 1.0 * ((args.num_epochs - epoch)/args.num_epochs)
+                 #print("KD Alpha Dynamic")
+
+            if args.change_t_s:
+                 loss_t = kd_loss_yaw.item() + kd_loss_pitch.item() + kd_loss_roll.item()  
+                 loss_s = loss_yaw.item() + loss_pitch.item() + loss_roll.item()   
+
+                 if loss_t < loss_s :
+                     kd_alpha = 1.0
+                 else:
+                     kd_alpha = 0.0
+                
+            kd_beta = 1.0 - kd_alpha
+
             # Cross entropy loss
-            loss_yaw = criterion(yaw, label_yaw)
-            loss_pitch = criterion(pitch, label_pitch)
-            loss_roll = criterion(roll, label_roll)
+            loss_yaw = criterion(yaw, label_yaw) * kd_beta
+            loss_pitch = criterion(pitch, label_pitch) * kd_beta
+            loss_roll = criterion(roll, label_roll) * kd_beta
+
+             # student loss with soft targets
+            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha
+            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha
+            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha
+
+            
+
+            loss_yaw +=kd_loss_yaw
+            loss_pitch +=kd_loss_pitch
+            loss_roll +=kd_loss_roll
+                
 
             # MSE loss
             yaw_predicted = softmax(yaw)
             pitch_predicted = softmax(pitch)
             roll_predicted = softmax(roll)
+
+            kd_yaw_predicted = softmax(yaw_t)
+            kd_pitch_predicted = softmax(pitch_t)
+            kd_roll_predicted = softmax(roll_t)
 
             yaw_predicted = \
                 torch.sum(yaw_predicted * idx_tensor, 1) * 3 - 99
@@ -420,9 +496,24 @@ if __name__ == '__main__':
             roll_predicted = \
                 torch.sum(roll_predicted * idx_tensor, 1) * 3 - 99
 
-            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)
-            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)
-            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
+            kd_yaw_predicted = \
+                torch.sum(kd_yaw_predicted * idx_tensor, 1) * 3 - 99
+            kd_pitch_predicted = \
+                torch.sum(kd_pitch_predicted * idx_tensor, 1) * 3 - 99
+            kd_roll_predicted = \
+                torch.sum(kd_roll_predicted * idx_tensor, 1) * 3 - 99
+
+            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)*kd_beta
+            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)*kd_beta
+            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)*kd_beta
+
+            kd_loss_reg_yaw = reg_criterion(yaw_predicted, kd_yaw_predicted)*kd_alpha
+            kd_loss_reg_pitch = reg_criterion(pitch_predicted, kd_pitch_predicted)*kd_alpha
+            kd_loss_reg_roll = reg_criterion(roll_predicted, kd_roll_predicted)*kd_alpha
+
+            loss_reg_yaw +=kd_loss_reg_yaw
+            loss_reg_pitch +=kd_loss_reg_pitch
+            loss_reg_roll +=kd_loss_reg_roll
 
             # Total loss
             loss_yaw += alpha * loss_reg_yaw
