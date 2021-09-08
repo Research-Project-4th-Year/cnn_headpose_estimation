@@ -451,17 +451,12 @@ if __name__ == '__main__':
             if args.kd_alpha_dynamic :
                  kd_alpha = 1.0 * ((args.num_epochs - epoch)/args.num_epochs)
                  #print("KD Alpha Dynamic")
+            
+            kd_beta = 1.0 - kd_alpha
 
             if args.change_t_s:
-                 loss_t = kd_loss_yaw.item() + kd_loss_pitch.item() + kd_loss_roll.item()  
-                 loss_s = loss_yaw.item() + loss_pitch.item() + loss_roll.item()   
-
-                 if loss_t < loss_s :
-                     kd_alpha = 1.0
-                 else:
-                     kd_alpha = 0.0
-                
-            kd_beta = 1.0 - kd_alpha
+                 kd_alpha = 1.0
+                 kd_beta = 1.0
 
             # Cross entropy loss
             loss_yaw = criterion(yaw, label_yaw) * kd_beta
@@ -473,11 +468,23 @@ if __name__ == '__main__':
             kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha
             kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha
 
-            
+            #Change the training the between student and teacher
+            if args.change_t_s:
+                 loss_t = kd_loss_yaw.item() + kd_loss_pitch.item() + kd_loss_roll.item()  
+                 loss_s = loss_yaw.item() + loss_pitch.item() + loss_roll.item()   
 
-            loss_yaw +=kd_loss_yaw
-            loss_pitch +=kd_loss_pitch
-            loss_roll +=kd_loss_roll
+                 if loss_t < loss_s :
+                     loss_yaw = kd_loss_yaw
+                     loss_pitch = kd_loss_pitch
+                     loss_roll = kd_loss_roll
+
+                     kd_beta = 0.0
+                 else:
+                     kd_alpha = 0.0
+            else:
+                loss_yaw +=kd_loss_yaw
+                loss_pitch +=kd_loss_pitch
+                loss_roll +=kd_loss_roll
                 
 
             # MSE loss
