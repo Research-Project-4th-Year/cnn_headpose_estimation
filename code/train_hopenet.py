@@ -387,15 +387,7 @@ if __name__ == '__main__':
     # Regression loss coefficient
     alpha = args.alpha
 
-    #define kd loss function
-    print(args.temperature)
-    kd_criterion = st_loss.SoftTarget(args.temperature)
-    if args.kd_loss == 'kl' :
-        kd_criterion = st_loss.SoftTarget(args.temperature)
-        print("Loss Function is KL")
-    elif args.kd_loss == 'ws' :
-        kd_criterion == wasserstein_distance_loss.SinkhornDistance(0.0001, 150, 'mean')
-        print("Loss is WS")
+
 
     softmax = nn.Softmax(dim=1).cuda(gpu)
     idx_tensor = [idx for idx in range(66)]
@@ -458,15 +450,15 @@ if __name__ == '__main__':
                  kd_alpha = 1.0
                  kd_beta = 1.0
 
-            # Cross entropy loss
+            # Student Cross entropy loss
             loss_yaw = criterion(yaw, label_yaw) * kd_beta
             loss_pitch = criterion(pitch, label_pitch) * kd_beta
             loss_roll = criterion(roll, label_roll) * kd_beta
 
-             # student loss with soft targets
-            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha
-            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha
-            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha
+             # Teacher Cross entropy loss
+            kd_loss_yaw = criterion(yaw_t, label_yaw) * kd_alpha
+            kd_loss_pitch = criterion(pitch_t, label_pitch) * kd_alpha
+            kd_loss_roll = criterion(roll_t, label_roll) * kd_alpha
 
             #Change the training the between student and teacher
             if args.change_t_s:
