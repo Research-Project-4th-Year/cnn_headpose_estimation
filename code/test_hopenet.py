@@ -150,6 +150,11 @@ if __name__ == '__main__':
 
     l1loss = torch.nn.L1Loss()
 
+    # Clear the log file
+    filename = './output/log/'+args.arch+'_test_log.txt'
+    with open(filename, 'w') as f:
+            pass
+
     for i, (images, labels, cont_labels, name) in enumerate(test_loader):
         images = Variable(images).cuda(gpu)
         total += cont_labels.size(0)
@@ -185,6 +190,20 @@ if __name__ == '__main__':
         yaw_error += torch.sum(torch.abs(yaw_predicted - label_yaw))
         pitch_error += torch.sum(torch.abs(pitch_predicted - label_pitch))
         roll_error += torch.sum(torch.abs(roll_predicted - label_roll))
+
+
+
+        # Use log purpose
+        binlabels = str(labels.numpy()[0][0]) + ',' + str(labels.numpy()[0][1]) + ',' + str(labels.numpy()[0][2])
+        binPredicted = str(yaw_bpred.item()) + ',' + str(pitch_bpred.item()) + ',' + str(roll_bpred.item())
+        contlabels = str(round(label_yaw.item(),4)) + ',' + str(round(label_pitch.item(),4)) + ',' + str(round(label_roll.item(),4))
+        contpredicted = str(round(yaw_predicted.item(),4)) + ',' + str(round(pitch_predicted.item(),4)) + ',' + str(round(roll_predicted.item(),4))
+        error = str(round(yaw_error.item(),4)) + ',' + str(round(pitch_error.item(),4)) + ',' + str(round(roll_error.item(),4))
+        log = binlabels + ',' + binPredicted + ',' + contlabels + ',' + contpredicted + ',' + error +'\n'
+        filename = './output/log/'+args.arch+'_test_log.txt'
+        with open(filename, 'a') as f:
+            f.write(log)
+       
 
         # Save first image in batch with pose cube or axis.
         if args.save_viz:
