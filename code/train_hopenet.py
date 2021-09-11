@@ -334,7 +334,8 @@ if __name__ == '__main__':
     #Load teacher network - resnet50
     teacher_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
-    saved_state_dict = torch.load('output/snapshots/basic_models/d1.pkl')
+    # saved_state_dict = torch.load('output/snapshots/basic_models/d1.pkl')
+    saved_state_dict = torch.load('output/snapshots/resnet50_basic_4.pkl')
     teacher_model.load_state_dict(saved_state_dict)
     # teacher_model.eval()
     for param in teacher_model.parameters():
@@ -352,11 +353,16 @@ if __name__ == '__main__':
             )
         ])
 
-   
+ 
     if args.dataset == 'BIWI':
         pose_dataset_train = datasets.BIWINEW(
             args.data_dir, args.filename_list_train, transformations)
         pose_dataset_test = datasets.BIWINEW(
+            args.data_dir, args.filename_list_test, transformations)
+    elif args.dataset == '300W_LP':
+        pose_dataset_train = datasets.Pose_300W_LP(
+            args.data_dir, args.filename_list_train, transformations)
+        pose_dataset_test = datasets.Pose_300W_LP(
             args.data_dir, args.filename_list_test, transformations)
     else:
         print('Error: not a valid dataset name')
