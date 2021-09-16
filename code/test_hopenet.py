@@ -24,11 +24,11 @@ def parse_args():
         default=0, type=int)
     parser.add_argument('--data_dir', 
         dest='data_dir', help='Directory path for data.',
-        default='datasets/AFLW2000', type=str)
+        default='datasets/BIWI', type=str)
     parser.add_argument('--filename_list', 
         dest='filename_list', 
         help='Path to text file containing relative paths for every example.',
-        default='datasets/AFLW2000/files.txt', type=str)
+        default='datasets/BIWI/biwi_test.txt', type=str)
     parser.add_argument('--snapshot', 
         dest='snapshot', help='Name of model snapshot.', 
         default='', type=str)
@@ -40,7 +40,7 @@ def parse_args():
         default=False, type=bool)
     parser.add_argument('--dataset', 
         dest='dataset', help='Dataset type.', 
-        default='AFLW2000', type=str)
+        default='BIWI', type=str)
     parser.add_argument(
         '--arch', dest='arch', 
         help='Network architecture, can be: ResNet18, ResNet34, [ResNet50], '
@@ -67,9 +67,6 @@ if __name__ == '__main__':
     elif args.arch == 'ResNet101':
         model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 23, 3], 66)
-    elif args.arch == 'ResNet152':
-        model = hopenet.Hopenet(
-            torchvision.models.resnet.Bottleneck, [3, 8, 36, 3], 66)
     elif args.arch == 'Squeezenet_1_0':
         model = hopelessnet.Hopeless_Squeezenet(args.arch, 66)
     elif args.arch == 'Squeezenet_1_1':
@@ -101,33 +98,14 @@ if __name__ == '__main__':
     transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
 
-    if args.dataset == 'Pose_300W_LP':
-        pose_dataset = datasets.Pose_300W_LP(
-            args.data_dir, args.filename_list, transformations)
-    elif args.dataset == 'Pose_300W_LP_random_ds':
-        pose_dataset = datasets.Pose_300W_LP_random_ds(
-            args.data_dir, args.filename_list, transformations)
-    elif args.dataset == 'AFLW2000':
-        pose_dataset = datasets.AFLW2000(
-            args.data_dir, args.filename_list, transformations)
-    elif args.dataset == 'AFLW2000_ds':
-        pose_dataset = datasets.AFLW2000_ds(
-            args.data_dir, args.filename_list, transformations)
-    elif args.dataset == 'BIWI':
+   
+    if args.dataset == 'BIWI':
         pose_dataset = datasets.BIWINEW(
-            args.data_dir, args.filename_list, transformations)
-    elif args.dataset == 'AFLW':
-        pose_dataset = datasets.AFLW(
-            args.data_dir, args.filename_list, transformations)
-    elif args.dataset == 'AFLW_aug':
-        pose_dataset = datasets.AFLW_aug(
-            args.data_dir, args.filename_list, transformations)
-    elif args.dataset == 'AFW':
-        pose_dataset = datasets.AFW(
             args.data_dir, args.filename_list, transformations)
     else:
         print('Error: not a valid dataset name')
         sys.exit()
+
     test_loader = torch.utils.data.DataLoader(
         dataset=pose_dataset,
         batch_size=args.batch_size,
@@ -151,9 +129,9 @@ if __name__ == '__main__':
     l1loss = torch.nn.L1Loss()
 
     # Clear the log file
-    filename = './output/log/'+args.arch+'_test_log.txt'
-    with open(filename, 'w') as f:
-            pass
+    # filename = './output/log/'+args.arch+'_test_log.txt'
+    # with open(filename, 'w') as f:
+    #         pass
 
     for i, (images, labels, cont_labels, name) in enumerate(test_loader):
         images = Variable(images).cuda(gpu)
@@ -194,15 +172,15 @@ if __name__ == '__main__':
 
 
         # Use log purpose
-        binlabels = str(labels.numpy()[0][0]) + ',' + str(labels.numpy()[0][1]) + ',' + str(labels.numpy()[0][2])
-        binPredicted = str(yaw_bpred.item()) + ',' + str(pitch_bpred.item()) + ',' + str(roll_bpred.item())
-        contlabels = str(round(label_yaw.item(),4)) + ',' + str(round(label_pitch.item(),4)) + ',' + str(round(label_roll.item(),4))
-        contpredicted = str(round(yaw_predicted.item(),4)) + ',' + str(round(pitch_predicted.item(),4)) + ',' + str(round(roll_predicted.item(),4))
-        error = str(round(yaw_error.item(),4)) + ',' + str(round(pitch_error.item(),4)) + ',' + str(round(roll_error.item(),4))
-        log = binlabels + ',' + binPredicted + ',' + contlabels + ',' + contpredicted + ',' + error +'\n'
-        filename = './output/log/'+args.arch+'_test_log.txt'
-        with open(filename, 'a') as f:
-            f.write(log)
+        # binlabels = str(labels.numpy()[0][0]) + ',' + str(labels.numpy()[0][1]) + ',' + str(labels.numpy()[0][2])
+        # binPredicted = str(yaw_bpred.item()) + ',' + str(pitch_bpred.item()) + ',' + str(roll_bpred.item())
+        # contlabels = str(round(label_yaw.item(),4)) + ',' + str(round(label_pitch.item(),4)) + ',' + str(round(label_roll.item(),4))
+        # contpredicted = str(round(yaw_predicted.item(),4)) + ',' + str(round(pitch_predicted.item(),4)) + ',' + str(round(roll_predicted.item(),4))
+        # error = str(round(yaw_error.item(),4)) + ',' + str(round(pitch_error.item(),4)) + ',' + str(round(roll_error.item(),4))
+        # log = binlabels + ',' + binPredicted + ',' + contlabels + ',' + contpredicted + ',' + error +'\n'
+        # filename = './output/log/'+args.arch+'_test_log.txt'
+        # with open(filename, 'a') as f:
+        #     f.write(log)
        
 
         # Save first image in batch with pose cube or axis.

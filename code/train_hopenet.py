@@ -151,29 +151,23 @@ def load_filtered_state_dict(model, snapshot):
         print('Ignoring "' + str(e) + '"')
 
 
-def write_training_result(train_losses, validation_losses, total_errors, arch):
+def write_training_result(train_losses, total_errors, arch):
     num_epochs = len(train_losses)
 
     file_name = './output/train_test_result/train_result_'+arch+'.txt'
     with open(file_name,'w') as f:
         for i in range(0,num_epochs):
             result = str(round(train_losses[i], 4)) + ',' \
-                   + str(round(valid_losses[i], 4)) + ',' \
                    + str(round(total_errors[i], 4)) + '\n'
             f.write(result)
 
-def validate(val_loader, model, criterion, alpha, args):
+def test(val_loader, model, args):
     
     model.eval()
     total = 0
-    total_loss = 0
 
     idx_tensor = [idx for idx in range(66)]
     idx_tensor = torch.FloatTensor(idx_tensor).cuda(gpu)
-
-    loss_yaw_total = .0
-    loss_pitch_total = .0
-    loss_roll_total = .0
 
     yaw_error = .0
     pitch_error = .0
@@ -182,17 +176,7 @@ def validate(val_loader, model, criterion, alpha, args):
     with torch.no_grad():
         for i, (images, labels, cont_labels, name) in enumerate(val_loader):
             images = Variable(images).cuda(gpu)
-            total += cont_labels.size(0)
-    
-            # Binned labels
-            label_yaw = Variable(labels[:,0]).cuda(gpu)
-            label_pitch = Variable(labels[:,1]).cuda(gpu)
-            label_roll = Variable(labels[:,2]).cuda(gpu)
-
-            # Continuous labels
-            label_yaw_cont = Variable(cont_labels[:,0]).cuda(gpu)
-            label_pitch_cont = Variable(cont_labels[:,1]).cuda(gpu)
-            label_roll_cont = Variable(cont_labels[:,2]).cuda(gpu)
+            total += cont_labels.size(0)    
 
             # Forward pass
             if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18' or args.arch == 'SEResNet50':
@@ -200,48 +184,13 @@ def validate(val_loader, model, criterion, alpha, args):
             elif args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or args.arch == 'DenseNet201' or args.arch == 'MobileNetV2':
                 x1, yaw, pitch, roll = model(images)
 
-            # Cross entropy loss
-            loss_yaw = criterion(yaw, label_yaw)
-            loss_pitch = criterion(pitch, label_pitch)
-            loss_roll = criterion(roll, label_roll)
-
-            # MSE loss
-            yaw_predicted = softmax(yaw)
-            pitch_predicted = softmax(pitch)
-            roll_predicted = softmax(roll)
-
-            yaw_predicted = \
-                torch.sum(yaw_predicted * idx_tensor, 1) * 3 - 99
-            pitch_predicted = \
-                torch.sum(pitch_predicted * idx_tensor, 1) * 3 - 99
-            roll_predicted = \
-                torch.sum(roll_predicted * idx_tensor, 1) * 3 - 99
-
-            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)
-            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)
-            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
-
-            # Total loss
-            loss_yaw += alpha * loss_reg_yaw
-            loss_pitch += alpha * loss_reg_pitch
-            loss_roll += alpha * loss_reg_roll
-
-            loss_yaw_total += loss_yaw.item()
-            loss_pitch_total += loss_pitch.item()
-            loss_roll_total += loss_roll.item()
-            
-
             #-----------------------------------
             #Calavulate MAE 
             label_yaw_cpu = cont_labels[:,0].float()
             label_pitch_cpu = cont_labels[:,1].float()
             label_roll_cpu = cont_labels[:,2].float()
 
-            #Binned Prediction
-            _, yaw_bpred = torch.max(yaw.data, 1)
-            _, pitch_bpred = torch.max(pitch.data, 1)
-            _, roll_bpred = torch.max(roll.data, 1)
-
+          
             # Continuous predictions
             yaw_predicted = utils.softmax_temperature(yaw.data, 1)
             pitch_predicted = utils.softmax_temperature(pitch.data, 1)
@@ -260,9 +209,8 @@ def validate(val_loader, model, criterion, alpha, args):
             roll_error += torch.sum(torch.abs(roll_predicted - label_roll_cpu))
 
         total_error = (yaw_error + pitch_error + roll_error)/(total *3)
-        total_loss = (loss_yaw + loss_pitch + loss_roll)/(total *3)
 
-        return yaw_error, pitch_error, roll_error, total_error.item(), total_loss.item(), total
+        return yaw_error, pitch_error, roll_error, total_error.item(), total
 
 def count_parameters_in_MB(model):
     return sum(np.prod(v.size()) for name, v in model.named_parameters())/1e6
@@ -278,71 +226,68 @@ if __name__ == '__main__':
     if not os.path.exists('output/snapshots'):
         os.makedirs('output/snapshots')
 
-    # Student architecture
+    #########################Student architecture###############################
     if args.arch == 'ResNet18':
-        model = hopenet.Hopenet(
+        student_model = hopenet.Hopenet(
             torchvision.models.resnet.BasicBlock, [2, 2, 2, 2], 66)
         pre_url = 'https://download.pytorch.org/models/resnet18-5c106cde.pth'
     elif args.arch == 'ResNet34':
-        model = hopenet.Hopenet(
+        student_model = hopenet.Hopenet(
             torchvision.models.resnet.BasicBlock, [3,4,6,3], 66)
         pre_url = 'https://download.pytorch.org/models/resnet34-333f7ec4.pth'
     elif args.arch == 'ResNet101':
-        model = hopenet.Hopenet(
+        student_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 23, 3], 66)
         pre_url = 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth'
     elif args.arch == 'ResNet152':
-        model = hopenet.Hopenet(
+        student_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 8, 36, 3], 66)
         pre_url = 'https://download.pytorch.org/models/resnet152-b121ed2d.pth'
     elif args.arch == 'Squeezenet_1_0':
-        model = hopelessnet.Hopeless_Squeezenet(args.arch, 66)
+        student_model = hopelessnet.Hopeless_Squeezenet(args.arch, 66)
         pre_url = \
             'https://download.pytorch.org/models/squeezenet1_0-a815701f.pth'
     elif args.arch == 'Squeezenet_1_1':
-        model = hopelessnet.Hopeless_Squeezenet(args.arch, 66)
+        student_model = hopelessnet.Hopeless_Squeezenet(args.arch, 66)
         pre_url = \
             'https://download.pytorch.org/models/squeezenet1_1-f364aa15.pth'
     elif args.arch == 'MobileNetV2':
-        model = hopelessnet.Hopeless_MobileNetV2(66, 1.0)
+        student_model = hopelessnet.Hopeless_MobileNetV2(66, 1.0)
         pre_url = \
             'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth'
     elif args.arch == 'SEResNet50':
-        model = seresnet50.se_resnet50(num_classes=66)
+        student_model = seresnet50.se_resnet50(num_classes=66)
         pre_url = 'https://github.com/moskomule/senet.pytorch/releases/download/archive/seresnet50-60a8950a85b2b.pkl'
     elif args.arch == 'DenseNet201':
-        model = densenet201.DenseNet_HopeNet(32, (6, 12, 24, 16), 64,66)
+        student_model = densenet201.DenseNet_HopeNet(32, (6, 12, 24, 16), 64,66)
         pre_url = 'https://download.pytorch.org/models/densenet201-c1103571.pth'
     else:
-        if args.arch != 'ResNet50':
-            print('Invalid value for architecture is passed! '
-                'The default value of ResNet50 will be used instead!')
-        model = hopenet.Hopenet(
-            torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
-        pre_url = 'https://download.pytorch.org/models/resnet50-19c8e357.pth'
+         print('Invalid value for architecture is passed!')
+         exit()
 
     if args.snapshot == '':
-        load_filtered_state_dict(model, model_zoo.load_url(pre_url))
+        load_filtered_state_dict(student_model, model_zoo.load_url(pre_url))
     else:
         saved_state_dict = torch.load(args.snapshot)
-        model.load_state_dict(saved_state_dict)
+        student_model.load_state_dict(saved_state_dict)
 
-    print(f"Student Netowrk Size: {count_parameters_in_MB(model)}MB")
-    print("Student: ",model)
+    print(f"Student Netowrk Size: {count_parameters_in_MB(student_model)}MB")
+    print("Student: ",student_model)
 
-    #Load teacher network - resnet50
+    #####################Teacher Network - ResNet50###############################
     teacher_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
     saved_state_dict = torch.load('output/snapshots/basic_models/d1.pkl')
     teacher_model.load_state_dict(saved_state_dict)
-    # teacher_model.eval()
+
     for param in teacher_model.parameters():
         param.requires_grad = False
     print(f"Teacher Netowrk Size: {count_parameters_in_MB(teacher_model)}MB")
     print("Teacher:",teacher_model)
 
-    print('Loading data.')
 
+
+    print('Loading data.')
     transformations = transforms.Compose([transforms.Resize(240),
         transforms.RandomCrop(224), transforms.ToTensor(),
         transforms.Normalize(
@@ -363,7 +308,7 @@ if __name__ == '__main__':
 
     
     print("Train Set:"+ str(len(pose_dataset_train)))
-    print("Validation Set :"+ str(len(pose_dataset_test)))
+    print("Test Set :"+ str(len(pose_dataset_test)))
 
     train_loader = torch.utils.data.DataLoader(
         dataset=pose_dataset_train,
@@ -371,13 +316,12 @@ if __name__ == '__main__':
         shuffle=True,
         num_workers=2)
     
-    val_loader = torch.utils.data.DataLoader(
+    test_loader = torch.utils.data.DataLoader(
         dataset=pose_dataset_test,
         batch_size=1,
-        shuffle=True,
         num_workers=2)
     
-    model.cuda(gpu)
+    student_model.cuda(gpu)
     teacher_model.cuda(gpu)
 
     teacher_model.eval()
@@ -388,38 +332,35 @@ if __name__ == '__main__':
     alpha = args.alpha
 
     #define kd loss function
-    print(args.temperature)
     kd_criterion = st_loss.SoftTarget(args.temperature)
-    if args.kd_loss == 'kl' :
-        kd_criterion = st_loss.SoftTarget(args.temperature)
-        print("Loss Function is KL")
-    elif args.kd_loss == 'ws' :
-        kd_criterion == wasserstein_distance_loss.SinkhornDistance(0.0001, 150, 'mean')
-        print("Loss is WS")
+    # if args.kd_loss == 'kl' :
+    #     kd_criterion = st_loss.SoftTarget(args.temperature)
+    #     print("Loss Function is KL")
+    # elif args.kd_loss == 'ws' :
+    #     kd_criterion == wasserstein_distance_loss.SinkhornDistance(0.0001, 150, 'mean')
+    #     print("Loss is WS")
 
     softmax = nn.Softmax(dim=1).cuda(gpu)
     idx_tensor = [idx for idx in range(66)]
     idx_tensor = Variable(torch.FloatTensor(idx_tensor)).cuda(gpu)
 
     optimizer = torch.optim.Adam([
-        {'params': get_ignored_params(model, args.arch), 'lr': 0},
-        {'params': get_non_ignored_params(model, args.arch), 'lr': args.lr},
-        {'params': get_fc_params(model, args.arch), 'lr': args.lr * 5}
+        {'params': get_ignored_params(student_model, args.arch), 'lr': 0},
+        {'params': get_non_ignored_params(student_model, args.arch), 'lr': args.lr},
+        {'params': get_fc_params(student_model, args.arch), 'lr': args.lr * 5}
         ], lr = args.lr)
 
     
 
-    # Early Stopping variables
+    # Log variables
     train_losses = []
-    valid_losses = []
-    valid_errors = []
+    test_errors = []
     total_train_loss = .0
     loss_yaw_total = .0
     loss_pitch_total = .0
     loss_roll_total = .0
     total_train_labels = 0
     minimum_error = 10000.0 #Minimum MAE
-    best_val_score = 10000.0
     counter = 0
 
     print('Ready to train network.')
@@ -440,9 +381,9 @@ if __name__ == '__main__':
 
             # Forward pass
             if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18' or args.arch == 'SEResNet50':
-                x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
+                x1, x2, x3, x4, x5, x6, yaw, pitch, roll = student_model(images)
             elif args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or args.arch == 'DenseNet201' or args.arch == 'MobileNetV2':
-                x1, yaw, pitch, roll = model(images)
+                x1, yaw, pitch, roll = student_model(images)
 
             x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)
 
@@ -450,7 +391,6 @@ if __name__ == '__main__':
             kd_alpha = 0.5
             if args.kd_alpha_dynamic :
                  kd_alpha = 1.0 * ((args.num_epochs - epoch)/args.num_epochs)
-                 #print("KD Alpha Dynamic")
             
             kd_beta = 1.0 - kd_alpha
 
@@ -527,7 +467,7 @@ if __name__ == '__main__':
             loss_pitch += alpha * loss_reg_pitch
             loss_roll += alpha * loss_reg_roll
 
-            #total training loss : use in early stopping procedure
+            #Total training loss : Log purpose 
             loss_yaw_total += loss_yaw.item()
             loss_pitch_total += loss_pitch.item()
             loss_roll_total += loss_roll.item()
@@ -559,9 +499,8 @@ if __name__ == '__main__':
         train_losses.append(total_train_loss)
 
         #Measure the MAE 
-        yaw_error, pitch_error, roll_error, total_error, total_val_loss, total = validate(val_loader, model, criterion, alpha, args)
-        valid_losses.append(total_val_loss)
-        valid_errors.append(total_error)
+        yaw_error, pitch_error, roll_error, total_error, total = test(test_loader, student_model, args)
+        test_errors.append(total_error)
 
         print('Validation error in degrees of the model on the ' + str(total) +
                     ' validation images. Yaw: %.4f, Pitch: %.4f, Roll: %.4f, MAE: %.4f' % (
@@ -576,29 +515,19 @@ if __name__ == '__main__':
 
 
         #Save the best model..
-        #if 1 == 1:
         if total_error < minimum_error:
                 print('Taking snapshot...',
-                    torch.save(model.state_dict(),
+                    torch.save(student_model.state_dict(),
                     'output/snapshots/' + args.output_string + 
                     str(args.arch)+'_Basic'+ '.pkl')
                 )
 
                 minimum_error = total_error
 
-        #Early Stopping
-        if best_val_score < total_val_loss:
-            counter += 1
-            if counter >= args.patience:
-                print("---------Early Stopping---------")
-                break
-        else:
-            best_val_score = total_val_loss
-            counter = 0
 
-        model.train()
+        student_model.train()
 
-    write_training_result(train_losses, valid_losses, valid_errors, args.arch)
+    write_training_result(train_losses, test_errors, args.arch)
 
 
 print("--- %s Train Time (seconds) ---" % (time.time() - start_time))
