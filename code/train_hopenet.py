@@ -141,30 +141,25 @@ def load_filtered_state_dict(model, snapshot):
         print('Ignoring "' + str(e) + '"')
 
 
-def write_training_result(train_losses, validation_losses, total_errors, arch):
+def write_training_result(train_losses, total_errors, arch):
     num_epochs = len(train_losses)
 
     file_name = './output/train_test_result/train_result_'+arch+'.txt'
     with open(file_name,'w') as f:
         for i in range(0,num_epochs):
             result = str(round(train_losses[i], 4)) + ',' \
-                   + str(round(valid_losses[i], 4)) + ',' \
                    + str(round(total_errors[i], 4)) + '\n'
             f.write(result)
 
-def validate(val_loader, model, criterion, alpha, args):
+def test(val_loader, model, args):
     
     model.eval()
     total = 0
-    total_loss = 0
 
     idx_tensor = [idx for idx in range(66)]
     idx_tensor = torch.FloatTensor(idx_tensor).cuda(gpu)
 
-    loss_yaw_total = .0
-    loss_pitch_total = .0
-    loss_roll_total = .0
-
+    
     yaw_error = .0
     pitch_error = .0
     roll_error = .0
@@ -174,52 +169,12 @@ def validate(val_loader, model, criterion, alpha, args):
             images = Variable(images).cuda(gpu)
             total += cont_labels.size(0)
     
-            # Binned labels
-            label_yaw = Variable(labels[:,0]).cuda(gpu)
-            label_pitch = Variable(labels[:,1]).cuda(gpu)
-            label_roll = Variable(labels[:,2]).cuda(gpu)
-
-            # Continuous labels
-            label_yaw_cont = Variable(cont_labels[:,0]).cuda(gpu)
-            label_pitch_cont = Variable(cont_labels[:,1]).cuda(gpu)
-            label_roll_cont = Variable(cont_labels[:,2]).cuda(gpu)
 
             # Forward pass
             if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18' or args.arch == 'SEResNet50':
                 x1, x2, x3, x4, x5, x6, yaw, pitch, roll = model(images)
             elif args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or args.arch == 'DenseNet201' or args.arch == 'MobileNetV2':
                 x1, yaw, pitch, roll = model(images)
-
-            # Cross entropy loss
-            loss_yaw = criterion(yaw, label_yaw)
-            loss_pitch = criterion(pitch, label_pitch)
-            loss_roll = criterion(roll, label_roll)
-
-            # MSE loss
-            yaw_predicted = softmax(yaw)
-            pitch_predicted = softmax(pitch)
-            roll_predicted = softmax(roll)
-
-            yaw_predicted = \
-                torch.sum(yaw_predicted * idx_tensor, 1) * 3 - 99
-            pitch_predicted = \
-                torch.sum(pitch_predicted * idx_tensor, 1) * 3 - 99
-            roll_predicted = \
-                torch.sum(roll_predicted * idx_tensor, 1) * 3 - 99
-
-            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)
-            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)
-            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
-
-            # Total loss
-            loss_yaw += alpha * loss_reg_yaw
-            loss_pitch += alpha * loss_reg_pitch
-            loss_roll += alpha * loss_reg_roll
-
-            loss_yaw_total += loss_yaw.item()
-            loss_pitch_total += loss_pitch.item()
-            loss_roll_total += loss_roll.item()
-            
 
             #-----------------------------------
             #Calavulate MAE 
@@ -250,9 +205,8 @@ def validate(val_loader, model, criterion, alpha, args):
             roll_error += torch.sum(torch.abs(roll_predicted - label_roll_cpu))
 
         total_error = (yaw_error + pitch_error + roll_error)/(total *3)
-        total_loss = (loss_yaw + loss_pitch + loss_roll)/(total *3)
 
-        return yaw_error, pitch_error, roll_error, total_error.item(), total_loss.item(), total
+        return yaw_error, pitch_error, roll_error, total_error.item(), total
 
 if __name__ == '__main__':
     args = parse_args()
@@ -344,10 +298,9 @@ if __name__ == '__main__':
         shuffle=True,
         num_workers=2)
     
-    val_loader = torch.utils.data.DataLoader(
+    test_loader = torch.utils.data.DataLoader(
         dataset=pose_dataset_test,
         batch_size=1,
-        shuffle=True,
         num_workers=2)
     
     model.cuda(gpu)
@@ -368,9 +321,8 @@ if __name__ == '__main__':
 
     
 
-    # Early Stopping variables
+    # Log file setup
     train_losses = []
-    valid_losses = []
     valid_errors = []
     total_train_loss = .0
     loss_yaw_total = .0
@@ -429,7 +381,7 @@ if __name__ == '__main__':
             loss_pitch += alpha * loss_reg_pitch
             loss_roll += alpha * loss_reg_roll
 
-            #total training loss : use in early stopping procedure
+            #total training loss : Log purpose
             loss_yaw_total += loss_yaw.item()
             loss_pitch_total += loss_pitch.item()
             loss_roll_total += loss_roll.item()
@@ -461,8 +413,7 @@ if __name__ == '__main__':
         train_losses.append(total_train_loss)
 
         #Measure the MAE 
-        yaw_error, pitch_error, roll_error, total_error, total_val_loss, total = validate(val_loader, model, criterion, alpha, args)
-        valid_losses.append(total_val_loss)
+        yaw_error, pitch_error, roll_error, total_error, total = test(test_loader, model, args)
         valid_errors.append(total_error)
 
         print('Validation error in degrees of the model on the ' + str(total) +
@@ -488,19 +439,9 @@ if __name__ == '__main__':
 
                 minimum_error = total_error
 
-        #Early Stopping
-        if best_val_score < total_val_loss:
-            counter += 1
-            if counter >= args.patience:
-                print("---------Early Stopping---------")
-                break
-        else:
-            best_val_score = total_val_loss
-            counter = 0
-
         model.train()
 
-    write_training_result(train_losses, valid_losses, valid_errors, args.arch)
+    write_training_result(train_losses, valid_errors, args.arch)
 
 
 print("--- %s Train Time (seconds) ---" % (time.time() - start_time))
