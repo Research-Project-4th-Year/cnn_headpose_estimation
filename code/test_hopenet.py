@@ -172,15 +172,15 @@ if __name__ == '__main__':
 
 
         # Use log purpose
-        # binlabels = str(labels.numpy()[0][0]) + ',' + str(labels.numpy()[0][1]) + ',' + str(labels.numpy()[0][2])
-        # binPredicted = str(yaw_bpred.item()) + ',' + str(pitch_bpred.item()) + ',' + str(roll_bpred.item())
-        # contlabels = str(round(label_yaw.item(),4)) + ',' + str(round(label_pitch.item(),4)) + ',' + str(round(label_roll.item(),4))
-        # contpredicted = str(round(yaw_predicted.item(),4)) + ',' + str(round(pitch_predicted.item(),4)) + ',' + str(round(roll_predicted.item(),4))
-        # error = str(round(yaw_error.item(),4)) + ',' + str(round(pitch_error.item(),4)) + ',' + str(round(roll_error.item(),4))
-        # log = binlabels + ',' + binPredicted + ',' + contlabels + ',' + contpredicted + ',' + error +'\n'
-        # filename = './output/log/'+args.arch+'_test_log.txt'
-        # with open(filename, 'a') as f:
-        #     f.write(log)
+        binlabels = str(labels.numpy()[0][0]) + ',' + str(labels.numpy()[0][1]) + ',' + str(labels.numpy()[0][2])
+        binPredicted = str(yaw_bpred.item()) + ',' + str(pitch_bpred.item()) + ',' + str(roll_bpred.item())
+        contlabels = str(round(label_yaw.item(),4)) + ',' + str(round(label_pitch.item(),4)) + ',' + str(round(label_roll.item(),4))
+        contpredicted = str(round(yaw_predicted.item(),4)) + ',' + str(round(pitch_predicted.item(),4)) + ',' + str(round(roll_predicted.item(),4))
+        error = str(round(yaw_error.item(),4)) + ',' + str(round(pitch_error.item(),4)) + ',' + str(round(roll_error.item(),4))
+        log = binlabels + ',' + binPredicted + ',' + contlabels + ',' + contpredicted + ',' + error +'\n'
+        filename = './output/log/'+args.arch+'_test_log.txt'
+        with open(filename, 'a') as f:
+            f.write(log)
        
 
         # Save first image in batch with pose cube or axis.
