@@ -129,9 +129,9 @@ if __name__ == '__main__':
     l1loss = torch.nn.L1Loss()
 
     # Clear the log file
-    # filename = './output/log/'+args.arch+'_test_log.txt'
-    # with open(filename, 'w') as f:
-    #         pass
+    filename = './output/log/'+args.arch+'_test_log.txt'
+    with open(filename, 'w') as f:
+            pass
 
     for i, (images, labels, cont_labels, name) in enumerate(test_loader):
         images = Variable(images).cuda(gpu)
