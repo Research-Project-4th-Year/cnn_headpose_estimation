@@ -277,7 +277,7 @@ if __name__ == '__main__':
     #####################Teacher Network - ResNet50###############################
     teacher_model = hopenet.Hopenet(
             torchvision.models.resnet.Bottleneck, [3, 4, 6, 3], 66)
-    saved_state_dict = torch.load('output/snapshots/basic_models/d1.pkl')
+    saved_state_dict = torch.load('output/snapshots/basic_models/ResNet50_Basic.pkl')
     teacher_model.load_state_dict(saved_state_dict)
 
     for param in teacher_model.parameters():

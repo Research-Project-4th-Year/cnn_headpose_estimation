@@ -2,14 +2,14 @@ import os
 import time
 import torch
 
-architectures = ['Squeezenet_1_0', 'Squeezenet_1_1', 'ResNet34', 'ResNet18', 'MobileNetV2', 'SEResNet50', 'DenseNet201']
-# architectures = ['SEResNet50']
+#architectures = ['Squeezenet_1_0', 'Squeezenet_1_1', 'ResNet34', 'ResNet18', 'MobileNetV2', 'SEResNet50']
+architectures = ['SEResNet50']
 time_list = []
 
 for arch in architectures:
 
     #Train with KD Loss
-    command = 'python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 50 --temperature 2.0 --arch ' + arch
+    command = 'python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --lr 0.00001 --alpha 1 --batch_size 16 --num_epochs 100 --temperature 2.0 --arch ' + arch
 
     #Train with Dynamic KD Loss
     #command = 'python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 100 --temperature 2.0  --kd_alpha_dynamic True --arch ' + arch
