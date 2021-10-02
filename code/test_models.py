@@ -1,6 +1,7 @@
 import os
 
-architectures = ['Squeezenet_1_0', 'Squeezenet_1_1', 'ResNet34', 'ResNet18', 'MobileNetV2', 'SEResNet50', 'DenseNet201']
+#architectures = ['Squeezenet_1_0', 'Squeezenet_1_0', 'ResNet34', 'ResNet18', 'MobileNetV2', 'SEResNet50', 'DenseNet201']
+architectures = ['SEResNet50', 'Squeezenet_1_0']
 time_list = []
 
 for arch in architectures:
