@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
 
-import datasets, hopenet, hopelessnet, seresnet50, densenet201, utils, st_loss, wasserstein_distance_loss
+import datasets, hopenet, hopelessnet, seresnet50, densenet201, utils, at_loss
 import torch.utils.model_zoo as model_zoo
 import time
 start_time = time.time()
