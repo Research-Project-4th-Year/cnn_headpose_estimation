@@ -69,20 +69,9 @@ def parse_args():
         help='Network architecture, can be: ResNet18, ResNet34, [ResNet50], '
             'ResNet101, ResNet152, Squeezenet_1_0, Squeezenet_1_1, MobileNetV2',
         default='ResNet50', type=str)
-    parser.add_argument('--temperature', dest='temperature', type=float, default=2.0, help='Temperature')
-    parser.add_argument('--kd_alpha', dest='kd_alpha', type=float, default=2.0, help='Knowledge Distillation Alpha')
-    parser.add_argument(
-        '--patience', dest='patience', help='Early stopping patience number.',
-        default=20, type=int)
-    parser.add_argument(
-        '--kd_alpha_dynamic', dest='kd_alpha_dynamic', help='Knowledge Distillation Alpha .',
-        default=False, type=bool)
-    parser.add_argument(
-        '--kd_loss', dest='kd_loss', help='Knowledge Distillation loss function .',
-        default='kl', type=str)
-    parser.add_argument(
-        '--change_t_s', dest='change_t_s', help='Change training procedure teacher and student according to MAE.',
-        default=False, type=bool)
+    parser.add_argument('--lambda_kd', type=float, default=1.0, help='trade-off parameter for kd loss')
+    parser.add_argument('--p', type=float, default=2.0, help='power for AT')
+
 
     args = parser.parse_args()
     return args
@@ -332,13 +321,8 @@ if __name__ == '__main__':
     alpha = args.alpha
 
     #define kd loss function
-    kd_criterion = st_loss.SoftTarget(args.temperature)
-    # if args.kd_loss == 'kl' :
-    #     kd_criterion = st_loss.SoftTarget(args.temperature)
-    #     print("Loss Function is KL")
-    # elif args.kd_loss == 'ws' :
-    #     kd_criterion == wasserstein_distance_loss.SinkhornDistance(0.0001, 150, 'mean')
-    #     print("Loss is WS")
+    kd_criterion = at_loss.AT(args.p)
+  
 
     softmax = nn.Softmax(dim=1).cuda(gpu)
     idx_tensor = [idx for idx in range(66)]
@@ -381,60 +365,44 @@ if __name__ == '__main__':
 
             # Forward pass
             if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18' or args.arch == 'SEResNet50':
-                x1, x2, x3, x4, x5, x6, yaw, pitch, roll = student_model(images)
+                x1_s, x2_s, x3_s, x4_s, x5_s, x6_s, yaw_s, pitch_s, roll_s = student_model(images)
             elif args.arch == 'Squeezenet_1_0' or args.arch == 'Squeezenet_1_1' or args.arch == 'DenseNet201' or args.arch == 'MobileNetV2':
-                x1, yaw, pitch, roll = student_model(images)
+                x1_s, yaw_s, pitch_s, roll_s = student_model(images)
 
             x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)
 
-            #KD alpha,beta
-            kd_alpha = 0.5
-            if args.kd_alpha_dynamic :
-                 kd_alpha = 1.0 * ((args.num_epochs - epoch)/args.num_epochs)
-            
-            kd_beta = 1.0 - kd_alpha
-
-            if args.change_t_s:
-                 kd_alpha = 1.0
-                 kd_beta = 1.0
+            print("Teacher1 :",x1_t[1].size())
+            print("Student1 :",x1_s[1].size())
+            print("Teacher2 :",x2_t[1].size())
+            print("Student2 :",x2_s[1].size())
+            print("Teacher3 :",x3_t[1].size())
+            print("Student3 :",x3_s[1].size())
+            print("Teacher4 :",x4_t[1].size())
+            print("Student5 :",x4_s[1].size())
+            exit()
 
             # Cross entropy loss
-            loss_yaw = criterion(yaw, label_yaw) * kd_beta
-            loss_pitch = criterion(pitch, label_pitch) * kd_beta
-            loss_roll = criterion(roll, label_roll) * kd_beta
+            loss_yaw = criterion(yaw_s, label_yaw) 
+            loss_pitch = criterion(pitch_s, label_pitch) 
+            loss_roll = criterion(roll_s, label_roll)
 
-             # student loss with soft targets
-            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha
-            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha
-            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha
+            # student loss with AT
+            kd_loss = (kd_criterion(x1_s[1], x1_t[1].detach()) +
+					   kd_criterion(x2_s[1], x2_t[1].detach()) +
+					   kd_criterion(x3_s[1], x3_t[1].detach()) +
+                       kd_criterion(x4_s[1], x4_t[1].detach())) / 4.0 * args.lambda_kd
 
-            #Change the training the between student and teacher
-            if args.change_t_s:
-                 loss_t = kd_loss_yaw.item() + kd_loss_pitch.item() + kd_loss_roll.item()  
-                 loss_s = loss_yaw.item() + loss_pitch.item() + loss_roll.item()   
-
-                 if loss_t < loss_s :
-                     loss_yaw = kd_loss_yaw
-                     loss_pitch = kd_loss_pitch
-                     loss_roll = kd_loss_roll
-
-                     kd_beta = 0.0
-                 else:
-                     kd_alpha = 0.0
-            else:
-                loss_yaw +=kd_loss_yaw
-                loss_pitch +=kd_loss_pitch
-                loss_roll +=kd_loss_roll
+          
+            loss_yaw +=kd_loss
+            loss_pitch +=kd_loss
+            loss_roll +=kd_loss
                 
 
             # MSE loss
-            yaw_predicted = softmax(yaw)
-            pitch_predicted = softmax(pitch)
-            roll_predicted = softmax(roll)
+            yaw_predicted = softmax(yaw_s)
+            pitch_predicted = softmax(pitch_s)
+            roll_predicted = softmax(roll_s)
 
-            kd_yaw_predicted = softmax(yaw_t)
-            kd_pitch_predicted = softmax(pitch_t)
-            kd_roll_predicted = softmax(roll_t)
 
             yaw_predicted = \
                 torch.sum(yaw_predicted * idx_tensor, 1) * 3 - 99
@@ -443,24 +411,11 @@ if __name__ == '__main__':
             roll_predicted = \
                 torch.sum(roll_predicted * idx_tensor, 1) * 3 - 99
 
-            kd_yaw_predicted = \
-                torch.sum(kd_yaw_predicted * idx_tensor, 1) * 3 - 99
-            kd_pitch_predicted = \
-                torch.sum(kd_pitch_predicted * idx_tensor, 1) * 3 - 99
-            kd_roll_predicted = \
-                torch.sum(kd_roll_predicted * idx_tensor, 1) * 3 - 99
 
-            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)*kd_beta
-            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)*kd_beta
-            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)*kd_beta
+            loss_reg_yaw = reg_criterion(yaw_predicted, label_yaw_cont)
+            loss_reg_pitch = reg_criterion(pitch_predicted, label_pitch_cont)
+            loss_reg_roll = reg_criterion(roll_predicted, label_roll_cont)
 
-            kd_loss_reg_yaw = reg_criterion(yaw_predicted, kd_yaw_predicted)*kd_alpha
-            kd_loss_reg_pitch = reg_criterion(pitch_predicted, kd_pitch_predicted)*kd_alpha
-            kd_loss_reg_roll = reg_criterion(roll_predicted, kd_roll_predicted)*kd_alpha
-
-            loss_reg_yaw +=kd_loss_reg_yaw
-            loss_reg_pitch +=kd_loss_reg_pitch
-            loss_reg_roll +=kd_loss_reg_roll
 
             # Total loss
             loss_yaw += alpha * loss_reg_yaw
