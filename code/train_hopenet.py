@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
 
-import datasets, hopenet, hopelessnet, seresnet50, densenet201, utils, st_loss, wasserstein_distance_loss, rkd_loss
+import datasets, hopenet, hopelessnet, seresnet50, densenet201, utils, st_loss, wasserstein_distance_loss, pkt_loss
 import torch.utils.model_zoo as model_zoo
 import time
 start_time = time.time()
@@ -352,7 +352,7 @@ if __name__ == '__main__':
     alpha = args.alpha
 
     #define kd loss function
-    kd_criterion = rkd_loss.RKD(args.w_dist, args.w_angle)
+    kd_criterion = pkt_loss.PKTCosSim()
     
 
     softmax = nn.Softmax(dim=1).cuda(gpu)
@@ -402,6 +402,7 @@ if __name__ == '__main__':
 
             x1_t, x2_t, x3_t, x4_t, x5_t, x6_t, yaw_t, pitch_t, roll_t = teacher_model(images)
 
+           
             #KD alpha,beta
             kd_alpha = 0.5
             if args.kd_alpha_dynamic :
@@ -419,10 +420,11 @@ if __name__ == '__main__':
             loss_pitch = criterion(pitch, label_pitch) * kd_beta
             loss_roll = criterion(roll, label_roll) * kd_beta
 
-             # student loss with soft targets
-            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha
-            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha
-            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha
+            # student loss with PKT
+            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha * 10000
+            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha * 10000
+            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha * 10000
+            
 
             #Change the training the between student and teacher
             if args.change_t_s:

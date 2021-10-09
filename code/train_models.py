@@ -9,7 +9,7 @@ time_list = []
 for arch in architectures:
 
     #Train with RKD Loss
-    command = 'python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --lr 0.00001 --alpha 1 --batch_size 16 --num_epochs 100 --w_dist 50.0 --w_angle 80.0 --arch ' + arch
+    command = 'python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --lr 0.00001 --alpha 1 --batch_size 16 --num_epochs 100  --arch ' + arch
 
     #Train with Dynamic KD Loss
     #command = 'python train_hopenet.py --dataset BIWI --data_dir ./datasets/BIWI --lr 0.00001 --alpha 1 --batch_size 64 --num_epochs 50 --w_dist 25.0 --w_angle 50.0  --kd_alpha_dynamic True --arch ' + arch
