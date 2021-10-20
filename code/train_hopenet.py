@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
 
-import datasets, hopenet, hopelessnet, seresnet50, densenet201, utils, st_loss, wasserstein_distance_loss, pkt_loss
+import datasets, hopenet, hopelessnet, seresnet50, densenet201, utils, st_loss, wasserstein_distance_loss, cc_loss
 import torch.utils.model_zoo as model_zoo
 import time
 start_time = time.time()
@@ -69,8 +69,8 @@ def parse_args():
         help='Network architecture, can be: ResNet18, ResNet34, [ResNet50], '
             'ResNet101, ResNet152, Squeezenet_1_0, Squeezenet_1_1, MobileNetV2',
         default='ResNet50', type=str)
-    parser.add_argument('--w_dist', type=float, default=25.0, help='weight for RKD distance')
-    parser.add_argument('--w_angle', type=float, default=50.0, help='weight for RKD angle')
+    parser.add_argument('--gamma', type=float, default=0.4, help='gamma in Gaussian RBF for CC')
+    parser.add_argument('--P_order', type=int, default=2, help='P-order Taylor series of Gaussian RBF for CC')
     parser.add_argument('--kd_alpha', dest='kd_alpha', type=float, default=2.0, help='Knowledge Distillation Alpha')
     parser.add_argument(
         '--patience', dest='patience', help='Early stopping patience number.',
@@ -352,7 +352,7 @@ if __name__ == '__main__':
     alpha = args.alpha
 
     #define kd loss function
-    kd_criterion = pkt_loss.PKTCosSim()
+    kd_criterion = cc_loss.CC(args.gamma, args.P_order)
     
 
     softmax = nn.Softmax(dim=1).cuda(gpu)
@@ -421,9 +421,9 @@ if __name__ == '__main__':
             loss_roll = criterion(roll, label_roll) * kd_beta
 
             # student loss with PKT
-            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha * 20000
-            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha * 20000
-            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha * 15000
+            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha * 50
+            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha * 50
+            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha * 50
             
 
             #Change the training the between student and teacher
