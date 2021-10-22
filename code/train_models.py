@@ -3,7 +3,7 @@ import time
 import torch
 
 #architectures = ['Squeezenet_1_0', 'Squeezenet_1_1', 'ResNet34', 'ResNet18', 'MobileNetV2', 'SEResNet50', 'DenseNet201']
-architectures = ['Squeezenet_1_1']
+architectures = ['SEResNet50']
 time_list = []
 
 for arch in architectures:
