@@ -39,14 +39,14 @@ def parse_args():
         default=0.000001, type=float)
     parser.add_argument(
         '--dataset', dest='dataset', help='Dataset type.', 
-        default='Pose_300W_LP', type=str)
+        default='BIWI', type=str)
     parser.add_argument(
         '--data_dir', dest='data_dir', help='Directory path for data.',
-        default='datasets/300W_LP', type=str)
+        default='datasets/BIWI', type=str)
     parser.add_argument(
         '--filename_list', dest='filename_list', 
         help='Path to text file containing relative paths for every example.',
-        default='datasets/300W_LP/files.txt', type=str)
+        default='datasets/BIWI/files.txt', type=str)
     parser.add_argument(
         '--filename_list_train', dest='filename_list_train', 
         help='Path to text file containing relative paths for every example.',
