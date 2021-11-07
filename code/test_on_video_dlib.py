@@ -21,6 +21,7 @@ import dlib
 import time
 start_time = time.time()
 total_time = 0
+process_frame = 0
 def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(
@@ -168,6 +169,8 @@ if __name__ == '__main__':
             conf = det.confidence
 
             if conf > 1.0:
+                print("+++++++++++++")
+                process_frame += 1
                 bbox_width = abs(x_max - x_min)
                 bbox_height = abs(y_max - y_min)
                 x_min -= 2 * bbox_width / 4
@@ -216,5 +219,6 @@ if __name__ == '__main__':
     out.release()
     video.release()
 print(total_time)
-print("--- %sPrediction Time (seconds) ---" % total_time)
-print("--- %sTotal Time (seconds) ---" % (time.time() - start_time))
+print("--- Prediction Time (seconds) %s ---" % total_time)
+print("--- Total Time (seconds) %s---" % (time.time() - start_time))
+print("----Process Frame %s", process_frame)
