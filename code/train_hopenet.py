@@ -420,10 +420,10 @@ if __name__ == '__main__':
             loss_pitch = criterion(pitch, label_pitch) * kd_beta
             loss_roll = criterion(roll, label_roll) * kd_beta
 
-            # student loss with PKT
-            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha * 50
-            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha * 50
-            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha * 50
+            # student loss with CC
+            kd_loss_yaw = kd_criterion(yaw, yaw_t.detach()) * kd_alpha * 200
+            kd_loss_pitch = kd_criterion(pitch, pitch_t.detach()) * kd_alpha * 200
+            kd_loss_roll = kd_criterion(roll, roll_t.detach()) * kd_alpha * 200
             
 
             #Change the training the between student and teacher
