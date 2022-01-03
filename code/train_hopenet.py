@@ -519,7 +519,7 @@ if __name__ == '__main__':
                 print('Taking snapshot...',
                     torch.save(student_model.state_dict(),
                     'output/snapshots/' + args.output_string + 
-                    str(args.arch)+'_Basic'+ '.pkl')
+                    str(args.arch)+'_Basic_0'+ '.pkl')
                 )
 
                 minimum_error = total_error
