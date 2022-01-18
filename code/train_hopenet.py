@@ -161,6 +161,16 @@ def write_training_result(train_losses, total_errors, arch):
                    + str(round(total_errors[i], 4)) + '\n'
             f.write(result)
 
+# def write_label_result(label_bin_yaw_arr,label_bin_pitch_arr, label_bin_roll_arr, label_cont_yaw_arr, label_cont_pith_arr, label_cont_roll_arr):
+#     num_images = len(label_bin_yaw_arr)
+#     file_name = './output/biwi_train_labels.txt'
+#     with open(file_name, 'w') as f:
+#         for i in range(0,num_images):
+#             labels = str(label_bin_yaw_arr[i]) + ',' + str(label_bin_pitch_arr[i]) + ',' + str(label_bin_roll_arr[i]) + ',' \
+#                      + str(round(label_cont_yaw_arr[i],4)) + ',' + str(round(label_cont_pith_arr[i],4)) + ',' + str(round(label_cont_roll_arr[i],4)) + '\n'
+#             f.write(labels)
+
+
 def test(val_loader, model, args):
     
     model.eval()
@@ -362,6 +372,12 @@ if __name__ == '__main__':
     total_train_labels = 0
     minimum_error = 10000.0 #Minimum MAE
     counter = 0
+    # label_bin_yaw_arr = []
+    # label_bin_pitch_arr = []
+    # label_bin_roll_arr = []
+    # label_cont_yaw_arr = []
+    # label_cont_pith_arr = []
+    # label_cont_roll_arr = []
 
     print('Ready to train network.')
     for epoch in range(num_epochs):
@@ -378,6 +394,14 @@ if __name__ == '__main__':
             label_yaw_cont = Variable(cont_labels[:,0]).cuda(gpu)
             label_pitch_cont = Variable(cont_labels[:,1]).cuda(gpu)
             label_roll_cont = Variable(cont_labels[:,2]).cuda(gpu)
+
+            
+            # label_bin_yaw_arr.append(label_yaw.item())
+            # label_bin_pitch_arr.append(label_pitch.item())
+            # label_bin_roll_arr.append(label_roll.item())
+            # label_cont_yaw_arr.append(label_yaw_cont.item())
+            # label_cont_pith_arr.append(label_pitch_cont.item())
+            # label_cont_roll_arr.append(label_roll_cont.item())
 
             # Forward pass
             if args.arch == 'ResNet50' or args.arch == 'ResNet34' or args.arch == 'ResNet18' or args.arch == 'SEResNet50':
@@ -494,7 +518,7 @@ if __name__ == '__main__':
                 )
 
 
-       
+        #write_label_result(label_bin_yaw_arr,label_bin_pitch_arr, label_bin_roll_arr, label_cont_yaw_arr, label_cont_pith_arr, label_cont_roll_arr)
         total_train_loss = (loss_yaw_total + loss_pitch_total + loss_roll_total)/(total_train_labels *3)
         train_losses.append(total_train_loss)
 
@@ -519,7 +543,7 @@ if __name__ == '__main__':
                 print('Taking snapshot...',
                     torch.save(student_model.state_dict(),
                     'output/snapshots/' + args.output_string + 
-                    str(args.arch)+'_Basic_0'+ '.pkl')
+                    str(args.arch)+'_Basic_0_1'+ '.pkl')
                 )
 
                 minimum_error = total_error
